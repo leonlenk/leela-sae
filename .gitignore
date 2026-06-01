@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.Python
+
+# Virtualenv / uv
+.venv/
+# uv.lock IS committed (reproducible env) — do not ignore it.
+
+# Test / tooling caches
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Project artifacts (heavy / regenerated — not source of truth)
+*.onnx
+*.pt
+*.pth
+*.safetensors
+*.ckpt
+checkpoints/
+data/cache/
+activations/
+*.npy
+*.npz
+
+# Experiment tracking & plots
+wandb/
+runs/
+*.png
+*.svg
+
+# Env / secrets
+.env
+
+# OS / editor
+.DS_Store

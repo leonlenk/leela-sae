@@ -1,0 +1,45 @@
+[project]
+name = "leela-sae"
+version = "0.1.0"
+description = "Train a sparse autoencoder on a Leela Chess Zero residual stream and validate features against chess ground truth."
+readme = "DESIGN.md"
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    # --- core: hook + SAE (steps 1-2) ---
+    "lczerolens[hf,viz]>=0.4.0",  # load BT nets via from_hf, differentiable graph
+    "torch>=2.5.0",
+    "chess>=1.11",                # python-chess: board-state ground truth
+    "numpy>=1.26",
+    "pyyaml>=6.0",                # config loading
+    # --- data pipeline (step 3) ---
+    "ray>=2.40",                  # parallel position generation + shuffle plumbing
+    # --- scaling + logging (step 3b) ---
+    "accelerate>=1.0",            # multi-GPU wrapper (after single-GPU loop works)
+    "wandb>=0.18",
+    "matplotlib>=3.10",
+    # --- auto-interp (step 5, side deliverable) ---
+    "dspy>=3.0",
+]
+
+[project.optional-dependencies]
+# Heavy, CUDA/Python-version-sensitive vLLM labeler — install explicitly:
+#   uv sync --extra serve
+serve = ["vllm>=0.6"]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+# package = false means the repo isn't installed; put the root on sys.path so the
+# design's own test imports (`from src.sae import TopKSAE`) resolve under `uv run pytest`.
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.uv]
+# Research artifact, not a library (DESIGN.md non-goal): manage the env/deps but
+# don't build or install this repo as a package. Run code via `uv run`.
+package = false
+# Keep the default sync lean; vLLM is opt-in via the `serve` extra.
+default-groups = ["dev"]
