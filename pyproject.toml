@@ -21,6 +21,19 @@ dependencies = [
     "dspy>=3.0",
 ]
 
+[build-system]
+# Editable install of this repo so `from src import hook` resolves from anywhere
+# (scripts, notebooks) without PYTHONPATH games. Hatchling is the lightweight
+# PEP 517/660 backend uv ships with.
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# Our importable package is literally `src` (the code does `from src import ...`),
+# not `leela_sae`, so name it explicitly — hatchling can't infer it from the
+# project name.
+packages = ["src"]
+
 [project.optional-dependencies]
 # Heavy, CUDA/Python-version-sensitive vLLM labeler — install explicitly:
 #   uv sync --extra serve
@@ -38,8 +51,9 @@ pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.uv]
-# Research artifact, not a library (DESIGN.md non-goal): manage the env/deps but
-# don't build or install this repo as a package. Run code via `uv run`.
-package = false
+# Install this repo as an editable package so `from src import ...` works from
+# scripts and notebooks, not just under pytest's `pythonpath`. Still a research
+# artifact (DESIGN.md non-goal): we don't publish it, just install it locally.
+package = true
 # Keep the default sync lean; vLLM is opt-in via the `serve` extra.
 default-groups = ["dev"]
