@@ -7,6 +7,7 @@ So they read it from the LEELA_SAE_CHECKPOINT env var and SKIP if unset. Once st
 the id, set it and the tests go red (NotImplementedError) -> green as you implement src/hook.py.
 """
 
+import math
 import os
 
 import chess
@@ -44,6 +45,21 @@ def test_predicts_known_forced_move(model):
 
 
 @requires_net
+def test_list_residual_modules(model):
+    mods = hook.list_residual_modules(model)
+    # Hand-checkable: BT3 has 15 encoder blocks (encoder0..encoder14), and the per-block
+    # residual site is each block's final LayerNorm "encoderN/ln2". So we expect 15 names.
+    assert len(mods) == 15
+    # Every candidate must be a block-final LN, and NONE may be a smolgen sub-LN (those are
+    # 256/6144-wide attention machinery, not the 768-wide residual stream).
+    assert all(n.endswith("/ln2") for n in mods)
+    assert all("smolgen" not in n for n in mods)
+    # Must come back ordered by block index so picking "layer k" is unambiguous.
+    idx = [int(n.split("encoder")[1].split("/")[0]) for n in mods]
+    assert idx == sorted(idx) == list(range(15))
+
+
+@requires_net
 def test_residual_stream_is_per_square(model):
     if not RESID_MODULE:
         pytest.skip("set LEELA_SAE_RESID_MODULE to a module name found in step 1")
@@ -53,8 +69,14 @@ def test_residual_stream_is_per_square(model):
 
 
 @requires_net
-def test_net_ignores_history(model):
-    # THE interp-safety assertion. Hand-checkable fact: the current-board finetune must NOT
-    # react to history-only changes. If this is True, you loaded the wrong (history-using) net
-    # and every feature you "find" could be keying off move history. Verify before trusting.
-    assert hook.output_depends_on_history(model, MATE_IN_ONE_FEN) is False
+def test_history_dependence_is_measured_and_reported(model):
+    # DIAGNOSTIC, NOT a gate (DESIGN.md §5 changed note). We now KEEP a history-using net and
+    # control for history downstream (eval/history_filter.py), so we must NOT assert the net
+    # ignores history. We only confirm the probe actually MEASURES and REPORTS the regime.
+    deltas = hook.output_depends_on_history(model, MATE_IN_ONE_FEN)
+    # Hand-checkable: the probe reports one logit-shift magnitude per history perturbation it
+    # applies while holding the current board fixed — zeroing the planes, and randomizing them.
+    assert set(deltas) == {"zero_delta", "randomize_delta"}
+    # Hand-checkable: each delta is a finite, non-negative magnitude (max|Δlogit| >= 0). We
+    # intentionally do NOT require it to be ~0 — we EXPECT history dependence here, by design.
+    assert all(math.isfinite(v) and v >= 0.0 for v in deltas.values())

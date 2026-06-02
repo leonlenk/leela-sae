@@ -15,8 +15,9 @@ and glue can be delegated; the conceptual spine cannot.
 
 | Decision | Choice | Why |
 |---|---|---|
-| Net family | Transformer (BT-series), not conv | Clean residual stream per square; mirrors LLM mech-interp |
-| Net variant | **Current-board-only** finetuned net (Jenner et al. lineage) | Removes the 8-position history stack, so a feature can't secretly key off "pawn just moved." Simplifies activation patching. |
+| Net family | **Transformer** (look for `xNNh` head count and/or `smolgen` in the name), not conv | Clean per-square residual stream; mirrors LLM mech-interp |
+| Net variant | Any transformer checkpoint of manageable size. History-using is FINE. Start small: `t1-smolgen-512x15x8h-distilled-swa-3395000` (transformer, 512-wide, distilled+SWA = stable, fast to iterate). Canonical alt: `BT3-768x15x24h-swa-2790000` (~109M, the size the literature uses). | We do NOT require a history-free net (see history note below). Pick for architecture + speed. |
+| History | **Keep it; treat as a controlled confound** (not "remove it") | Hold history planes fixed across patching; add "survives history randomization?" as an eval filter. This is what the Jenner paper effectively does. |
 | Activation site | Per-square residual stream after a chosen block (transformer net) | per-square = 64 "tokens"/position. NB: on a conv net it's `[B, C, 8, 8]` instead — confirm which arch your checkpoint is |
 | Hooking | `lczerolens` + **nnsight** | `LczeroModel.from_hf(...)` + `LczeroBoard`; nnsight does the capture/patch. Exact module name comes from `print(model)`, not from this doc |
 | SAE variant | **TopK** to start (direct L0 control), JumpReLU as v2 | Sidesteps L1 feature-suppression; `k` is a clean knob |
@@ -44,11 +45,19 @@ patch a feature, re-run `model(board)`, diff these tensors.
 
 ### Caveats that bit / will bite
 
-- **History is in the input.** The `112`-plane input encodes Leela's 8-position
-  history. It is NOT removable at the activation site. The Jenner "current-board"
-  net is a *finetune* that ignores history. **Unverified:** whether the HF repo
-  `lczerolens/evidence-of-learned-lookahead` is that finetune — its model card is
-  empty. Confirm by loading it, not by reading a card.
+- **History is in the input, and most nets USE it.** The `112`-plane input
+  encodes Leela's 8-position history; it is not removable at the activation site.
+  **Empirically confirmed** (step-1 experiment): `evidence-of-learned-lookahead`
+  is the paper's *history-using* net — zeroing the history planes shifts policy
+  logits by ~0.7, randomizing them by ~3.3. That repo is named after the
+  look-ahead paper; it is NOT the current-board finetune (my earlier §1 assumption
+  was wrong — the name was the tell). The history-free finetune is a separate
+  artifact and may not be published in that repo.
+  **Decision:** we do not chase the finetune. We keep a history-using transformer
+  and control for history (hold history planes fixed in patching; filter features
+  by whether they survive history randomization). `output_depends_on_history` is
+  therefore a *diagnostic that records the regime*, NOT a hard pass/fail gate — see
+  the test note in §5.
 - **Pick the ONNX file, not the .pt.** On HF these repos ship both `model.onnx`
   (scanner: Safe) and `model.pt` (scanner: Unsafe, because *all* pickles are
   flagged — the listed imports here are benign onnx2torch/torch.nn objects).
@@ -64,10 +73,13 @@ patch a feature, re-run `model(board)`, diff these tensors.
 
 ### Still to verify in step 1 (do these by hand, they ARE the first task)
 
-1. Load `evidence-of-learned-lookahead` (or a BT3 checkpoint), `print(model)`,
-   record the real module names of the per-square residual stream after each block.
-2. Confirm history behavior: does changing only the history planes change the
-   output? If not, it's the current-board net.
+1. **Confirm the checkpoint is a transformer.** Load it, `print(model)`. Conv =
+   `Conv2d(...)` blocks (wrong). Transformer = attention/MLP/`smolgen` modules
+   (right). Record the real module names of the per-square residual stream after
+   each block — these go in the config; they are NOT knowable from this doc.
+2. **Characterise history dependence, don't gate on it.** Measure how much zeroing
+   vs randomizing the history planes moves the policy. Record the regime. We expect
+   history dependence and we control for it; we do not reject the net for it.
 3. Confirm move reproduction on a handful of known positions.
 
 ---
@@ -96,8 +108,9 @@ But interpretability adds a second, overriding axis — **the trust asymmetry:**
   it is the whole point: dead features, the sparsity/reconstruction tradeoff, L0
   collapse — you need the feel.
 - **The first activation hook, end-to-end.** Load net → run a position →
-  *reproduce Leela's actual move* → pull residual stream → confirm shape. Verify
-  you did not include the history stack.
+  *reproduce Leela's actual move* → pull residual stream → confirm shape. Confirm
+  the net is a transformer and *characterise* its history dependence (don't try to
+  exclude it).
 - **The eval logic.** Both halves. The feature→board-property mapping is where
   your *result* lives and it's chess-specific. The causal patching harness too.
 
@@ -161,9 +174,10 @@ understand just multiplies the confusion.
 4. **Build the eval yourself** — correlational first, then causal.
 5. **Bolt on auto-interp last** (DSPy pipeline, optional vLLM-served labeler).
 
-A feature is only "real" once it passes: high activation correlation with a board
-property **and** a causal effect on the heads when patched. Reconstruction quality
-alone proves nothing.
+A feature is only "real" once it passes three checks: high activation correlation
+with a board property, **and** a causal effect on the heads when patched, **and**
+it survives history randomization (i.e. it tracks the board, not move-order — the
+confound filter). Reconstruction quality alone proves nothing.
 
 ---
 
@@ -188,16 +202,23 @@ leela-sae/
 │   ├── eval/
 │   │   ├── board_props.py     🔒  feature → python-chess property mapping
 │   │   ├── correlational.py   🔒  F1 / coverage
-│   │   └── causal.py          🔒  patch feature → policy/WDL delta
+│   │   ├── causal.py          🔒  patch feature → policy/WDL delta (history held FIXED)
+│   │   └── history_filter.py  🔒  does feature survive history randomization? (confound)
 │   ├── autointerp/            🤖  DSPy pipeline, optional vLLM labeler
 │   └── viz/                   🤖  plots, wandb
 ├── scripts/
-│   ├── 01_reproduce_move.py   🔒  step 1 — the verification gate
+│   ├── 01_reproduce_move.py   🔒  step 1 — verify transformer + characterise history
 │   └── 02_train_small.py      🔒  step 2
 └── tests/
-    ├── test_hook.py           🔒  reconstruct a known board by hand
+    ├── test_hook.py           🔒  reproduce known moves; RECORD history dependence
     └── test_features.py       🔒  a "white king on g1" feature fires iff true
 ```
+
+> **Test-semantics note (changed):** `output_depends_on_history` is a *diagnostic*,
+> not a gate. Do NOT `assert ... is False`. Instead assert that the script
+> *measures and reports* the history-dependence magnitude (e.g. assert the zero-
+> and randomize-deltas are recorded and finite). We now expect history dependence
+> and handle it via `eval/history_filter.py`, rather than rejecting the net.
 
 ### Stub: `src/sae.py` — example of the §3.5 style the agent should produce
 
@@ -332,7 +353,8 @@ src/data/*, src/viz/*, src/autointerp/*, configs/*, pyproject.toml, and the
 Accelerate wrapper in train.py (ONLY after a working single-GPU loop exists).
 
 ## Always
-- Never silently change the activation site or include the history stack.
+- Never silently change the activation site. The net uses move-history; hold the
+  history planes FIXED in any patching experiment and never vary them by accident.
 - For hook/eval tests: I will personally verify each assertion checks the right
   thing before trusting it. Flag any assertion you're unsure about.
 ```

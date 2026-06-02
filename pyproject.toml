@@ -19,6 +19,7 @@ dependencies = [
     "matplotlib>=3.10",
     # --- auto-interp (step 5, side deliverable) ---
     "dspy>=3.0",
+    "nnsight>=0.7.0",
 ]
 
 [build-system]
@@ -49,6 +50,13 @@ dev = [
 # design's own test imports (`from src.sae import TopKSAE`) resolve under `uv run pytest`.
 pythonpath = ["."]
 testpaths = ["tests"]
+filterwarnings = [
+    # onnx2torch's Slice converter indexes a tensor with a Python list; PyTorch deprecated that
+    # (message says "pytorch 2.9", we're already on 2.11). It's THIRD-PARTY (lczerolens -> onnx2torch),
+    # not our code, and the net still loads + reproduces moves correctly, so it's pure log noise.
+    # Scoped narrowly by message + module so we never silence a warning from OUR code.
+    "ignore:Using a non-tuple sequence for multidimensional indexing is deprecated:UserWarning:onnx2torch.node_converters.slice",
+]
 
 [tool.uv]
 # Install this repo as an editable package so `from src import ...` works from
