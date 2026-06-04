@@ -2336,6 +2336,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "ray" },
     { name = "torch" },
+    { name = "tqdm" },
     { name = "wandb" },
 ]
 
@@ -2361,6 +2362,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "ray", specifier = ">=2.40" },
     { name = "torch", specifier = ">=2.5.0" },
+    { name = "tqdm", specifier = ">=4.66" },
     { name = "vllm", marker = "extra == 'serve'", specifier = ">=0.6" },
     { name = "wandb", specifier = ">=0.18" },
 ]

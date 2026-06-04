@@ -1,7 +1,7 @@
 """The Top-K sparse autoencoder (🔒 — you write the bodies; this file is a scaffold per DESIGN.md §3.5)."""
 
 import torch, torch.nn as nn
-
+import torch.nn.functional as F
 
 class TopKSAE(nn.Module):
     """One-layer Top-K sparse autoencoder.
@@ -18,32 +18,27 @@ class TopKSAE(nn.Module):
         self.k = k
         self.encoder = nn.Linear(d_model, dict_size)            # W_enc: (D -> F)
         self.decoder = nn.Linear(dict_size, d_model, bias=False)# W_dec: (F -> D)
+        with torch.no_grad():
+            self.decoder.weight.data = F.normalize(self.decoder.weight, dim=-2)
         self.pre_bias = nn.Parameter(torch.zeros(d_model))      # subtracted on input
-        # TODO (1): initialise pre_bias to the DATA MEAN (or geometric median) of a
-        #           batch of activations, so reconstruction starts from a sane point.
-        # TODO (2): normalise decoder columns to unit L2 norm (and re-normalise after
-        #           each optimiser step). Without this the basis directions aren't
-        #           comparable and feature magnitudes are arbitrary.
+
+    def init_pre_bias(self, batch):
+        self.pre_bias.data = batch.mean(0)
 
     def encode(self, x):                       # x: (B, D) -> feats: (B, F)
-        # TODO (3): subtract pre_bias from x.                # (B, D)
-        # TODO (4): apply self.encoder.                      # (B, F) pre-activations
-        # TODO (5): keep only the top-k values per row, zero everything else.
-        #           Hint: torch.topk over dim=-1, scatter back into a zeros tensor.
-        raise NotImplementedError
+        pre = x - self.pre_bias
+        pre = self.encoder(pre)
+        pre_relued = F.relu(pre)
+        topk = torch.topk(pre_relued, self.k, dim=-1)
+        out = torch.zeros_like(pre_relued)
+        out.scatter_(dim=-1, index = topk.indices, src=topk.values)
+        return out, pre
 
     def decode(self, feats):                   # feats: (B, F) -> recon: (B, D)
-        # TODO (6): self.decoder(feats) + pre_bias.          # (B, D)
-        raise NotImplementedError
+        return self.decoder(feats) + self.pre_bias
 
     def forward(self, x):                      # -> (recon (B,D), feats (B,F))
-        # TODO (7): feats = encode(x); recon = decode(feats); return both.
-        raise NotImplementedError
+        feats, pre = self.encode(x)
+        recon = self.decode(feats)
+        return recon, feats, pre
 
-
-# Training loop lives in train.py. The breadcrumbs you'll implement there:
-#   # TODO (A): loss = mse(recon, x)   — NO L1 term; Top-K already enforces sparsity
-#   # TODO (B): add aux_k loss: let dead latents reconstruct the residual (x - recon)
-#   #           so they get gradient and can revive. Track which latents are "dead".
-#   # TODO (C): log every step: L0 (== k here, sanity check), fraction-dead,
-#   #           and "loss recovered" (substitute recon into the net, compare CE).

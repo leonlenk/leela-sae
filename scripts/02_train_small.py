@@ -8,19 +8,53 @@ green first, then this script orchestrates a real run.
 
 from src import hook, train
 from src.sae import TopKSAE
+from src.data import cache, positions
+from src.eval import feature_mining
+from src.viz import features
 
+import yaml
+from pathlib import Path
+import torch
 
 def main():
-    # TODO (1): load the net + chosen residual module confirmed in script 01 (read configs/default.yaml).
-    # TODO (2): cache activations: run hook.get_residual_stream over a few thousand positions and stack
-    #           them into one (N, 64, d_model) tensor on disk. Flatten to (N*64, d_model) for the SAE.
-    # TODO (3): build TopKSAE(d_model, dict_size = expansion * d_model, k) and init pre_bias to the
-    #           data mean of a warmup batch (src/sae.py TODO 1).
-    # TODO (4): call train.train(config) on the cached activations (single GPU).
-    # TODO (5): after training, pick ONE feature, find its top-activating positions, and eyeball them —
-    #           does it correspond to something chess-meaningful? This is the "believe it" check.
-    # TODO (6): save the trained SAE (the canary + eval tests load it via LEELA_SAE_SAE_CKPT).
-    raise NotImplementedError
+    with open(Path("configs/default.yaml")) as f:
+            cfg = yaml.safe_load(f) 
+
+    base_model = hook.load_model().eval()
+    module = hook.list_residual_modules(base_model)[cfg["residual_modual"]]
+
+    capture = lambda fens: hook.get_residual_stream_batch(base_model, fens, module)
+    fens = positions.load_fens(limit=20_000, shuffle=True, seed=cfg["seed"])
+    split = int(0.9 * len(fens))
+    train_fens, eval_fens = fens[:split], fens[split:]
+
+    with torch.no_grad():
+        amura_v_calderin = "8/1p6/p2R1b2/P1B2k1p/1P3p1P/2r2b1K/5N2/8 w - - 0 1"
+        resid = hook.get_residual_stream(base_model, amura_v_calderin, module)
+        d_model = resid.shape[1]
+        cache_path = cache.cache_activations(
+             train_fens, capture,                          # cache ONLY the training FENs
+             Path(cfg["output_path"], "data.npy"),
+             d_model,
+             batch_size=cfg["base_model_batch"],
+             signature=f"leela@{cfg['residual_modual']}"
+            )
+
+    acts = cache.load_activations(cache_path)                       # (N*64, D) tensor
+    dataset = torch.utils.data.TensorDataset(acts)
+    loader = torch.utils.data.DataLoader(
+        dataset, batch_size=cfg["sae_batch"], shuffle=True, drop_last=True,
+    )
+    F_dim = cfg["sae_hidden_factor"] * d_model
+    sae = TopKSAE(d_model, F_dim, cfg["top_k"])
+    sae.init_pre_bias(acts)                                # centre on the data mean over all rows (N*64, D)
+    sae = train.train(cfg, sae, base_model, loader, F_dim, eval_fens=eval_fens, module_name=module)
+    torch.save(sae, Path(cfg["output_path"], "sae.pt"))
+
+    # Final held-out score on the FULL eval set (the in-loop logging only sampled a slice).
+    sae.eval()
+    recovered = train.mean_loss_recovered(base_model, eval_fens, sae, module)
+    print(f"held-out loss_recovered: {recovered:.4f}")
 
 
 if __name__ == "__main__":

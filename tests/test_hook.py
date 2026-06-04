@@ -69,6 +69,36 @@ def test_residual_stream_is_per_square(model):
 
 
 @requires_net
+def test_residual_stream_batch_matches_one_by_one(model):
+    # The SPEED fix: get_residual_stream_batch runs ONE forward pass over a stack of boards
+    # instead of N separate B=1 passes. This test is its whole contract — it must return the
+    # SAME numbers the per-board path returns, just computed together. If batching changed the
+    # activation site, padding, or input encoding, these would diverge and we'd silently train
+    # the SAE on corrupted activations.
+    if not RESID_MODULE:
+        pytest.skip("set LEELA_SAE_RESID_MODULE to a module name found in step 1")
+
+    # Two genuinely different positions so a bug that mixes boards (e.g. broadcasting one board
+    # across the batch) can't pass by accident.
+    fens = [MATE_IN_ONE_FEN, "8/1p6/p2R1b2/P1B2k1p/1P3p1P/2r2b1K/5N2/8 w - - 0 1"]
+
+    batched = hook.get_residual_stream_batch(model, fens, RESID_MODULE)
+    # Hand-checkable: B boards in -> (B, 64, d_model) out. Note this KEEPS the batch dim, unlike
+    # the single-board get_residual_stream which squeezes it. 64 square-tokens, 3-D.
+    assert batched.ndim == 3
+    assert batched.shape[0] == len(fens) and batched.shape[1] == 64
+
+    # The correctness check: row b of the batched output must equal the standalone capture of
+    # board b. Same net, same input, same module -> identical up to float noise from differing
+    # reduction order in a batched matmul. atol/rtol are loose enough for that, tight enough to
+    # catch a real mismatch (wrong board, wrong layer, zeroed history).
+    import torch
+    for b, fen in enumerate(fens):
+        one = hook.get_residual_stream(model, fen, RESID_MODULE)   # (64, d_model)
+        assert torch.allclose(batched[b], one, atol=1e-4, rtol=1e-4)
+
+
+@requires_net
 def test_history_dependence_is_measured_and_reported(model):
     # DIAGNOSTIC, NOT a gate (DESIGN.md §5 changed note). We now KEEP a history-using net and
     # control for history downstream (eval/history_filter.py), so we must NOT assert the net

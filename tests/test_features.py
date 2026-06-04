@@ -52,7 +52,7 @@ def _feature_activation(stack, fen):
     from src import hook
     model, sae, module_name = stack
     resid = hook.get_residual_stream(model, fen, module_name)   # (64, d_model)
-    _, feats = sae(resid)                                       # (64, F)
+    _, feats, _ = sae(resid)                                    # (recon, feats (64,F), pre)
     return feats[:, int(KG1_FEATURE)].max().item()             # strongest firing across the 64 squares
 
 

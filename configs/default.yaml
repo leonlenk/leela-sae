@@ -1,1 +1,20 @@
 # default.yaml — net checkpoint, layer idx, k, lr, tokens (agent scaffolds, you decide design ⚙️).
+residual_modual: 7
+base_model_batch: 256
+output_path: "./outputs"
+seed: 67
+
+# sae
+sae_hidden_factor: 8    # how many times bigger the hidden dim should be than the models residual
+top_k: 32
+
+# training
+epochs: 2
+lr: 1.0e-3
+warmup_steps: 100        # linear LR warmup; 0 disables
+aux_coef: .1
+aux_k: 1024
+sae_batch: 4096          # SGD minibatch size over flattened (N*64, D) activation rows
+train_eval_freq: 10      # how often (in steps) to LOG metrics — read-only, cheap
+dead_window: 25          # how often (in steps) to RECOMPUTE dead_mask — defines what "dead" means
+eval_sample: 16          # how many held-out FENs to score for loss_recovered per log (live-net, slow)
