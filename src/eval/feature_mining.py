@@ -77,6 +77,7 @@ def feature_liveness(
     Returns (F,); in the notebook: `density = feature_liveness(...)`, then sort / threshold it to pick
     non-dead features instead of hand-guessing indices. density == 0 is dead.
     """
+    sae = sae.to(next(model.parameters()).device)
     per_board = []
     with torch.no_grad():
         for fen in fens:
@@ -106,6 +107,7 @@ def mine_feature(
     (src/viz/features.token_to_square), which knows the fen. Don't convert in this function.
     """
 
+    sae = sae.to(next(model.parameters()).device)
     per_board = []
     with torch.no_grad():
         for fen in fens:

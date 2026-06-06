@@ -45,18 +45,43 @@ def token_to_square(fen: str, token: int) -> int:
     return token if chess.Board(fen).turn == chess.WHITE else chess.square_mirror(token)
 
 
-def board_svg(fen: str, token: int, size: int = 320) -> str:
+def describe_firing_piece(fen: str, token: int) -> str:
+    """Human label for the piece on the firing square, in Leela's SIDE-TO-MOVE frame ("own"/"enemy").
+
+    Leela sees the board from the mover's view, so the *meaningful* split is own-vs-enemy, not
+    white-vs-black: a side-to-move-relative feature ("enemy pawn in my half") lands on a black pawn
+    when White moves and a white pawn when Black moves — same concept, opposite absolute colour. We
+    compare piece.color to board.turn to collapse that flip. Returns e.g. "enemy pawn", or "empty".
+    """
+    board = chess.Board(fen)
+    square = token_to_square(fen, token)              # token index -> real square (mirror if black)
+    piece = board.piece_at(square)
+    if piece is None:
+        return "empty"
+    side = "own" if piece.color == board.turn else "enemy"   # relative to whoever is to move
+    return f"{side} {chess.piece_name(piece.piece_type)}"
+
+
+def board_svg(fen: str, token: int, size: int = 320, relative: bool = False) -> str:
     """Render `fen` as a chess.com-styled SVG with the firing TOKEN's square highlighted amber.
 
     Returns the raw SVG markup as a string. `token` is a Leela residual token index; we convert it
     to the real python-chess square via token_to_square so the highlight is correct for both colours
-    to move. Board is always drawn from White's view so squares line up across positions you compare.
+    to move.
+
+    `relative` picks the viewing frame — and it matters for reading Leela features:
+      * False (default): fixed White orientation. Squares line up across boards (a passed pawn on b5
+        is on b5 everywhere), but absolute piece COLOUR flips with whose move it is, so a single
+        side-to-move-relative feature looks like it fires on "both colours".
+      * True: orient from the SIDE TO MOVE (board.turn). Now "my pawns" sit at the bottom in every
+        board, so an us/them feature reads as ONE concept instead of smearing across white & black.
     """
     board = chess.Board(fen)
     square = token_to_square(fen, token)   # token index -> real square (mirror if black to move)
+    orientation = board.turn if relative else chess.WHITE
     return chess.svg.board(
         board,
-        orientation=chess.WHITE,           # fixed view: a passed pawn on b5 is on b5 in every board
+        orientation=orientation,           # side-to-move view (relative) or fixed White (absolute)
         fill={square: HIGHLIGHT},          # paint just the firing square
         colors=CHESSCOM_COLORS,
         size=size,
@@ -106,11 +131,17 @@ def show_top_activations(
     results: Iterable[Activation],
     marker: str = "*",
     size: int = 300,
+    relative: bool = False,
 ):
     """Lay the top-activating positions out as a grid of chess.com-style boards for the notebook.
 
     Returns a `_Gallery` whose `_repr_html_` makes Jupyter draw it inline. Each card shows the rank,
     the activation, the firing square + side to move, and the SVG board with that square highlighted.
+
+    `relative=True` flips every board to the SIDE-TO-MOVE's view and labels the firing piece
+    own/enemy instead of white/black (see board_svg / describe_firing_piece). Use it when a feature
+    looks like it fires on "both colours" — that's usually one us/them concept seen in the absolute
+    frame, and the relative view collapses it back to a single readable concept.
     """
     results = list(results)
     cards = []
@@ -118,19 +149,23 @@ def show_top_activations(
         square = token_to_square(fen, token)
         sq_name = chess.square_name(square)
         turn = "white to move" if chess.Board(fen).turn == chess.WHITE else "black to move"
-        svg = board_svg(fen, token, size=size)
+        # In the relative view, colour is meaningless (we flipped the board) — show own/enemy + piece.
+        subtitle = describe_firing_piece(fen, token) if relative else turn
+        svg = board_svg(fen, token, size=size, relative=relative)
         # One card: a header line (rank / activation / square) above the board SVG.
         cards.append(
             "<div style='display:inline-block;margin:8px;text-align:center;"
             "font-family:system-ui,sans-serif;vertical-align:top'>"
             f"<div style='font-weight:600;color:#312e2b'>#{rank} &middot; act {act:.3f}</div>"
             f"<div style='font-size:12px;color:#666;margin-bottom:4px'>fires on "
-            f"<b>{sq_name}</b> &middot; {turn}</div>"
+            f"<b>{sq_name}</b> &middot; {subtitle}</div>"
             f"{svg}</div>"
         )
 
+    frame = "side-to-move view" if relative else "white's view"
     header = (
         f"<h3 style='font-family:system-ui,sans-serif;color:#312e2b'>"
-        f"feature #{feature}: top {len(results)} activating positions</h3>"
+        f"feature #{feature}: top {len(results)} activating positions "
+        f"<span style='font-size:13px;font-weight:400;color:#666'>({frame})</span></h3>"
     )
     return _Gallery(header + "<div>" + "".join(cards) + "</div>")
