@@ -123,7 +123,9 @@ def test_train_runs_configured_number_of_epochs(monkeypatch):
         epochs=epochs,
     )
     # No net needed: eval_fens=None / base_model=None means the loss_recovered branch is skipped.
-    train.train(cfg, sae, base_model=None, loader=loader)
+    # train() now takes F_dim explicitly (it sizes the fired_counts / dead_mask vectors); pass the
+    # same dict width the SAE was built with so the dead-latent bookkeeping matches the dictionary.
+    train.train(cfg, sae, base_model=None, loader=loader, F_dim=F_dim)
 
     # 3 epochs x 4 batches == 12 step bodies. Current (epoch-less) loop runs only 4 -> this fails RED
     # until you wrap the inner loop in `for epoch in range(config["epochs"])`.
