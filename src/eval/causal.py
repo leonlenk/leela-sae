@@ -4,6 +4,7 @@ This is the ground truth that separates a real feature from a sparse code that m
 The heads (policy, wdl) come for free from model(board) — no extra wiring (DESIGN.md §1)."""
 
 import torch
+import torch.nn.functional as F
 from nnsight import NNsight
 from lczerolens import LczeroModel, LczeroBoard
 from lczerolens.board import InputEncoding
@@ -48,7 +49,9 @@ def patch_feature(
             policy = nn_model.output["policy"].save()   # (2, 1858)
             wdl = nn_model.output["wdl"].save()         # (2, 3)
 
-    # clean == row 0, dirty == row 1. abs delta = magnitude of the head shift from the ablation.
-    policy_delta = (policy[1] - policy[0]).abs()   # (1858,)
-    wdl_delta = (wdl[1] - wdl[0]).abs()            # (3,)
-    return policy_delta, wdl_delta
+    # clean == row 0, dirty == row 1
+    p0 = policy[0].softmax(-1)
+    p1 = policy[1].softmax(-1)
+    policy_kl = F.kl_div(p1.log(), p0, reduction="sum") 
+    wdl_delta = (wdl[1] - wdl[0])       # (3,)
+    return policy_kl, wdl_delta
