@@ -1,187 +1,154 @@
-"""SAE training: single-GPU loop + loss/metrics (🔒 — you write these, §3.5 scaffold).
+"""Single-GPU Top-K SAE training loop + its loss pieces.
 
-The Accelerate multi-GPU wrapper is ⚙️ and comes LATER — only after this single-GPU loop works
-and the tests pass (DESIGN.md §4 step 3b). Don't add it here yet.
+Objective: normalised reconstruction MSE (no L1 — Top-K already fixes sparsity) plus the AuxK loss
+that revives dead latents. Data: an in-memory (N, D) activation tensor (fp16 is fine; batches are
+upcast on the GPU), sampled as shuffled minibatches so the 64 correlated tokens of a board are spread
+across many steps.
+
+Network-level fidelity (does the net still play the same when the SAE is spliced in?) lives in
+src/eval/fidelity.py; this file only needs activations.
 """
 
-from typing import Any
+from __future__ import annotations
+
+import math
 
 import torch
 import torch.nn.functional as F
-from tqdm import tqdm
-from nnsight import NNsight
-from lczerolens import LczeroBoard
-from lczerolens.board import InputEncoding
+from tqdm.auto import tqdm
 
-def reconstruction_loss(recon, x):
-    """Plain MSE between reconstruction and input. (B, D) -> scalar.
+DEFAULTS = {
+    "batch_size": 4096,
+    "epochs": 2,
+    "lr": None,              # None -> Gao et al. scaling rule 2e-4 / sqrt(F / 2^14)
+    "warmup_steps": 200,
+    "decay_frac": 0.2,       # linearly decay the LR to 0 over the last 20% of steps
+    "aux_coef": 1 / 32,
+    "aux_k": 512,
+    "dead_tokens": 2_000_000,  # a latent is "dead" if it hasn't fired in this many training tokens
+    "grad_clip": 1.0,
+    "log_every": 100,
+    "seed": 0,
+}
 
-    This is the ENTIRE sparsity-free objective. Top-K already pins L0 == k, so there is
-    deliberately NO L1 term — adding one would re-introduce the feature-suppression bias
-    we chose Top-K to avoid.
-    """
+
+def reconstruction_loss(recon: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+    """Plain MSE. (B, D) -> scalar."""
     return F.mse_loss(recon, x)
 
-def l0_norm(feats):
-    """Mean number of nonzero features per token. (B, F) -> scalar.
 
-    A sanity probe, not a loss: for a correct Top-K SAE this should equal k exactly. If it
-    drifts from k, the top-k mask is wrong.
-    """
-    count = torch.count_nonzero(feats, dim=-1).float()
-    count = count.mean(dim=0)
-    return count
+def normalized_mse(recon: torch.Tensor, x: torch.Tensor) -> torch.Tensor:
+    """MSE divided by the variance of x around its batch mean: the fraction of variance unexplained
+    (FVU). 1.0 == no better than predicting the mean; scale-free, so losses are comparable across
+    layers and the aux term's coefficient means the same thing everywhere."""
+    return reconstruction_loss(recon, x) / (x - x.mean(0, keepdim=True)).pow(2).mean().clamp_min(1e-12)
 
 
-def update_dead_latents(fired_counts, feats):
-    """Accumulate how often each latent fired, so we can flag "dead" (never-firing) latents.
-
-    `fired_counts`: (F,) running count. `feats`: (B, F) this step. Returns the updated (F,) count.
-    Dead latents are the SAE's failure mode — they occupy dictionary capacity but encode nothing.
-    """
-    counts = torch.count_nonzero(feats, dim=0)
-    fired_counts += counts
-    return fired_counts
+def l0_norm(feats: torch.Tensor) -> torch.Tensor:
+    """Mean number of nonzero features per token. (B, F) -> scalar. <= k for a Top-K SAE."""
+    return torch.count_nonzero(feats, dim=-1).float().mean()
 
 
-def aux_k_loss(x, recon, feats_pre, dead_mask, aux_k, sae):
-    """Auxiliary loss that revives dead latents (the "aux_k"/ghost-grads trick).
+def update_tokens_since_fired(counter: torch.Tensor, feats: torch.Tensor) -> torch.Tensor:
+    """(F,) tokens elapsed since each latent last fired; reset to 0 for latents that fired now."""
+    counter += feats.shape[0]
+    counter[(feats > 0).any(0)] = 0
+    return counter
 
-    Idea (read before coding): the residual the model FAILED to reconstruct is (x - recon).
-    We let ONLY the dead latents (dead_mask over F) try to reconstruct that residual using their
-    top-aux_k activations, and add the MSE of that attempt. This routes gradient into latents that
-    never fire, giving them a chance to come back to life. If there are no dead latents -> 0.
 
-    `feats_pre`: (B, F) pre-top-k activations. `dead_mask`: (F,) bool. -> scalar.
-    """
+def aux_k_loss(x: torch.Tensor, recon: torch.Tensor, pre: torch.Tensor, dead_mask: torch.Tensor,
+               aux_k: int, sae) -> torch.Tensor:
+    """AuxK loss (Gao et al. §A.2): let ONLY the dead latents try to reconstruct what the live ones
+    missed, e = x - recon (detached). We take each token's top-aux_k (ReLU'd) dead pre-activations,
+    decode them with W_dec alone (no b_pre: e already has the bias removed), and score with the
+    normalised MSE. Gradient therefore flows only into dead latents, pulling them towards directions
+    the dictionary is currently missing. Returns 0 when nothing is dead."""
     if not dead_mask.any():
-        return 0
-    masked_feats_pre = feats_pre[:, dead_mask]              # (B, F_dead)
-    k = min(aux_k, masked_feats_pre.shape[-1])
-    topk = torch.topk(masked_feats_pre, k, dim=-1)
-    sub = torch.zeros_like(masked_feats_pre)               # (B, F_dead)
-    sub.scatter_(dim=-1, index=topk.indices, src=topk.values)
-    out = torch.zeros_like(feats_pre)                      # (B, F) full width, live cols stay 0
-    out[:, dead_mask] = sub                                # place dead-subset at its real cols
-    new_recon = sae.decoder(out)                         # (B, D)
-    target = (x - recon).detach()                          # the error the live latents left behind
-    return reconstruction_loss(new_recon, target)
+        return pre.new_zeros(())
+    dead_pre = F.relu(pre[:, dead_mask])                              # (B, F_dead), >= 0
+    k = min(aux_k, dead_pre.shape[-1])
+    top = torch.topk(dead_pre, k, dim=-1)
+    codes = torch.zeros_like(pre)
+    dead_idx = torch.nonzero(dead_mask).flatten()
+    codes.scatter_(-1, dead_idx[top.indices], top.values)              # back into full-width (B, F)
+    aux_recon = sae.decoder(codes)                                     # (B, D), no pre_bias
+    target = (x - recon).detach()
+    return normalized_mse(aux_recon, target)
 
 
-def loss_recovered(base_model, fen, sae, module_name):
-    """"Loss recovered": substitute the SAE recon back into the net and see how much the net's
-    own behaviour is preserved. The real quality metric — pure MSE can look great while the net
-    falls apart. 1.0 == recon is as good as the true activation, 0.0 == as bad as zero-ablation.
-
-    Single position. `fen` is a FEN string. Behaviour drift is measured as KL(clean_policy ||
-    patched_policy) (option A): loss_clean == KL(clean||clean) == 0, so the recovered fraction
-    collapses to (loss_zero - loss_recon) / loss_zero.
-    """
-    board = LczeroBoard(fen)
-    device = next(base_model.parameters()).device
-    board_input = board.to_input_tensor(input_encoding=InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED).to(device)
-
-    nn_model: Any = NNsight(base_model)
-    resid_module = nn_model.get(module_name)
-    policy_module = nn_model.get("module.output/policy")
-
-    with torch.no_grad():
-        # no intervention
-        with nn_model.trace(board_input):
-            act = resid_module.output.save()             # (1, 64, D)
-            clean_logits = policy_module.output.save()   # (1, n_moves)
-
-        # run sae
-        recon = sae(act.squeeze(0))[0].unsqueeze(0)      # (1, 64, D)
-        zeros = torch.zeros_like(act)                    # the zero-ablation baseline
-
-        # splice the sae's reconstruction into the base model
-        with nn_model.trace(board_input):
-            resid_module.output = recon
-            recon_logits = policy_module.output.save()
-
-        # splice in zeros instead for the counterfactual
-        with nn_model.trace(board_input):
-            resid_module.output = zeros
-            zero_logits = policy_module.output.save()
-
-    # KL(clean || patched) over the policy distribution: p_clean * (logp_clean - logp_patched), summed.
-    p_clean = clean_logits.softmax(-1)                   # (1, n_moves)
-    logp_clean = clean_logits.log_softmax(-1)
-    loss_recon = (p_clean * (logp_clean - recon_logits.log_softmax(-1))).sum()
-    loss_zero = (p_clean * (logp_clean - zero_logits.log_softmax(-1))).sum()
-
-    if loss_zero < 1e-8:
-        return torch.tensor(1.0)
-    return (loss_zero - loss_recon) / loss_zero          # loss_clean == 0 -> denominator is loss_zero
+@torch.no_grad()
+def fvu(sae, acts: torch.Tensor, chunk: int = 8192) -> float:
+    """Fraction of variance unexplained over a whole (N, D) set, chunked to bound GPU memory."""
+    device = sae.decoder.weight.device
+    mean = acts.float().mean(0).to(device)
+    err = var = 0.0
+    for s in range(0, acts.shape[0], chunk):
+        x = acts[s:s + chunk].to(device).float()
+        err += float((sae(x)[0] - x).pow(2).sum())
+        var += float((x - mean).pow(2).sum())
+    return err / var
 
 
-def mean_loss_recovered(base_model, fens, sae, module_name):
-    """Average loss_recovered over a held-out FEN list (the thin eval loop). One board is noisy;
-    the reported metric is the mean over a held-out set. Returns a python float."""
-    vals = [float(loss_recovered(base_model, f, sae, module_name)) for f in fens]
-    return sum(vals) / len(vals) if vals else float("nan")
+def _lr_lambda(total_steps: int, warmup: int, decay_frac: float):
+    decay_start = int(total_steps * (1 - decay_frac))
+
+    def f(step: int) -> float:
+        if warmup > 0 and step < warmup:
+            return (step + 1) / warmup
+        if step >= decay_start:
+            return max(0.0, (total_steps - step) / max(1, total_steps - decay_start))
+        return 1.0
+    return f
 
 
-def train(config, sae, base_model, loader, F_dim, eval_fens=None, module_name=None):
-    """Single-GPU training loop (DESIGN.md §4 step 2). No Ray, no Accelerate yet.
+def train(sae, acts: torch.Tensor, config: dict | None = None, val_acts: torch.Tensor | None = None,
+          device: str | None = None) -> tuple[torch.nn.Module, list[dict]]:
+    """Train `sae` on activation rows `acts` (N, D). Returns (sae, history of logged metrics)."""
+    cfg = {**DEFAULTS, **(config or {})}
+    device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+    sae = sae.to(device).train()
+    F_dim = sae.decoder.weight.shape[1]
+    lr = cfg["lr"] or 2e-4 / math.sqrt(F_dim / 2 ** 14)
+    opt = torch.optim.Adam(sae.parameters(), lr=lr, betas=(0.9, 0.999), eps=6.25e-10)
 
-    Watch ONE feature until you believe it — this loop exists to build intuition, not throughput.
+    N, bs = acts.shape[0], cfg["batch_size"]
+    steps_per_epoch = N // bs
+    total = steps_per_epoch * cfg["epochs"]
+    sched = torch.optim.lr_scheduler.LambdaLR(opt, _lr_lambda(total, cfg["warmup_steps"], cfg["decay_frac"]))
+    gen = torch.Generator().manual_seed(cfg["seed"])
+    since_fired = torch.zeros(F_dim, device=device)
 
-    `eval_fens` + `module_name` are optional: pass a held-out FEN list to log loss_recovered during
-    training. Left None (e.g. in fast tests) the loop trains on cached acts alone, no live net needed.
-    """
-    device = "cuda" if torch.cuda.is_available() else "cpu"
-    sae = sae.to(device)
-    sae.train()
-    optimizer = torch.optim.NAdam(sae.parameters(), config["lr"])
+    history, step = [], 0
+    bar = tqdm(total=total, desc="train SAE")
+    for _ in range(cfg["epochs"]):
+        perm = torch.randperm(N, generator=gen)
+        for s in range(steps_per_epoch):
+            x = acts[perm[s * bs:(s + 1) * bs]].to(device, non_blocking=True).float()   # (B, D)
+            recon, feats, pre = sae(x)
+            dead = since_fired > cfg["dead_tokens"]
+            mse = normalized_mse(recon, x)
+            aux = aux_k_loss(x, recon, pre, dead, cfg["aux_k"], sae)
+            loss = mse + cfg["aux_coef"] * aux
 
-    warmup_steps = config.get("warmup_steps", 0)
-    scheduler = torch.optim.lr_scheduler.LambdaLR(
-        optimizer,
-        lambda s: min(1.0, (s + 1) / warmup_steps) if warmup_steps > 0 else 1.0,
-    )
-
-    fired_counts = torch.zeros(F_dim, device=device)                  # (F,) running fire count for the CURRENT window
-    dead_mask = torch.zeros(F_dim, dtype=torch.bool, device=device)   # (F,) nothing counts as dead until window 1 ends
-
-    step = 0
-    for epoch in range(config["epochs"]):            
-        pbar = tqdm(loader, desc=f"epoch {epoch}")
-        for (batch,) in pbar:                          # TensorDataset yields 1-tuples; batch: (B, D)
-            batch = batch.to(device)
-            recon, feats, pre_feats = sae(batch)     # feats: post-top-k (B,F); pre_feats: pre-top-k
-            fired_counts = update_dead_latents(fired_counts, feats)   # tally this batch's fires (F,)
-
-            loss = (reconstruction_loss(recon, batch)
-                    + config["aux_coef"] * aux_k_loss(batch, recon, pre_feats,
-                                                      dead_mask, config["aux_k"], sae))
+            opt.zero_grad(set_to_none=True)
             loss.backward()
-            optimizer.step()
-            scheduler.step()
-            optimizer.zero_grad()
-            with torch.no_grad():                      # re-unit-norm decoder cols after the step
-                sae.decoder.weight.data = F.normalize(sae.decoder.weight, dim=-2)
+            sae.remove_parallel_decoder_grad()
+            torch.nn.utils.clip_grad_norm_(sae.parameters(), cfg["grad_clip"])
+            opt.step()
+            sched.step()
+            sae.normalize_decoder()
+            with torch.no_grad():
+                update_tokens_since_fired(since_fired, feats)
 
-            # keeps track of when features are dead for the aux loss
-            if (step + 1) % config["dead_window"] == 0:
-                dead_mask = fired_counts == 0
-                fired_counts = torch.zeros(F_dim, device=device)
-
-            if step % config["train_eval_freq"] == 0:
-                postfix = dict(
-                    loss=loss.item(),
-                    l0_norm=float(l0_norm(feats)),              # sanity: should sit at k
-                    dead=float(dead_mask.float().mean()),  # fraction of the dictionary currently dead
-                )
-
-                if eval_fens is not None and module_name is not None:
-                    sae.eval()
-                    sample = eval_fens[: config.get("eval_sample", 16)]
-                    postfix["recov"] = mean_loss_recovered(base_model, sample, sae, module_name)
-                    sae.train()
-                pbar.set_postfix(postfix)
-
-            step += 1    
-
-    return sae
+            if step % cfg["log_every"] == 0 or step == total - 1:
+                rec = {"step": step, "tokens": (step + 1) * bs, "lr": sched.get_last_lr()[0],
+                       "fvu": mse.item(), "aux": aux.item(), "l0": l0_norm(feats).item(),
+                       "dead_frac": float(dead.float().mean())}
+                if val_acts is not None:
+                    rec["val_fvu"] = fvu(sae, val_acts)
+                history.append(rec)
+                bar.set_postfix({k: round(v, 4) for k, v in rec.items() if k in ("fvu", "val_fvu", "l0", "dead_frac")})
+            step += 1
+            bar.update(1)
+    bar.close()
+    return sae.eval(), history

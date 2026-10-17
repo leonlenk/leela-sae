@@ -70,3 +70,33 @@ def test_encode_is_differentiable_through_kept_entries():
     feats.sum().backward()
     assert sae.encoder.weight.grad is not None
     assert sae.encoder.weight.grad.abs().sum() > 0
+
+
+def test_encoder_is_initialised_to_decoder_transpose():
+    # Tied init: each latent starts reading along the same direction it writes. An untied random
+    # encoder leaves many latents never entering any top-k (dead from step 0).
+    sae = TopKSAE(d_model=16, dict_size=64, k=4)
+    assert torch.allclose(sae.encoder.weight, sae.decoder.weight.T)
+
+
+def test_parallel_gradient_is_projected_out_of_decoder_columns():
+    # After projection, each decoder column's gradient is orthogonal to the column itself, so the
+    # step changes only its direction (its norm is reset to 1 anyway).
+    torch.manual_seed(0)
+    sae = TopKSAE(d_model=8, dict_size=16, k=3)
+    recon, _, _ = sae(torch.randn(32, 8))
+    recon.pow(2).sum().backward()
+    sae.remove_parallel_decoder_grad()
+    g = sae.decoder.weight.grad
+    cos = (sae.decoder.weight * g).sum(0) / g.norm(dim=0).clamp_min(1e-12)   # (F,) cos(w_i, g_i)
+    assert cos.abs().max() < 1e-5
+
+
+def test_save_load_roundtrip(tmp_path):
+    torch.manual_seed(0)
+    sae = TopKSAE(d_model=8, dict_size=16, k=3)
+    sae.init_pre_bias(torch.randn(100, 8) + 2)
+    sae.save(tmp_path / "sae.pt", layer=7)
+    back = TopKSAE.load(tmp_path / "sae.pt")
+    x = torch.randn(4, 8)
+    assert back.k == 3 and torch.equal(back(x)[0], sae(x)[0])
