@@ -67,3 +67,23 @@ def test_feature_density_flags_dead_features():
     out = feature_density(feats)
     assert out[2] == 1.0       # fires everywhere -> density 1.0
     assert int((out == 0.0).sum()) == 4   # the remaining four are dead
+
+
+def test_top_activating_never_pads_with_zero_rows():
+    # A rare feature with only 2 real firings, asked for k=5: return the 2 hits, not 3 zero rows at
+    # arbitrary tokens that a gallery would then render as "top activations".
+    acts = torch.zeros(3, 64)
+    acts[1, 7], acts[2, 2] = 2.0, 1.0
+    out = top_activating(acts, ["a", "b", "c"], k=5)
+    assert out == [("b", 7, 2.0), ("c", 2, 1.0)]
+
+
+def test_density_from_codes_matches_dense_definition():
+    from src.eval.codes import SparseCodes
+    from src.eval.feature_mining import density_from_codes
+    torch.manual_seed(0)
+    dense = torch.relu(torch.randn(4, 64, 10))
+    top = torch.topk(dense, 3, dim=-1)
+    codes = SparseCodes(top.indices, top.values, 10)
+    sparse_dense = torch.zeros_like(dense).scatter(-1, top.indices, top.values)
+    assert torch.allclose(density_from_codes(codes), feature_density(sparse_dense.reshape(-1, 10)))

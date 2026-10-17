@@ -131,3 +131,57 @@ def test_changed_signature_regenerate(tmp_path):
     cache.cache_activations(fens, capture, path, d_model=D_MODEL, signature="netA@layer3")
     cache.cache_activations(fens, capture, path, d_model=D_MODEL, signature="netA@layer7")
     assert state["calls"] == 10                        # layer swap -> regenerate
+
+
+def varying_capture(fens):
+    """(B, 64, D) with a value that differs along EVERY axis: board*1000 + square + dim/100, so a
+    permutation of the d_model axis (or of squares, or boards) would be caught."""
+    b = len(fens)
+    board = torch.tensor([int(f) for f in fens], dtype=torch.float32)[:, None, None]
+    sq = torch.arange(cache.SQUARES, dtype=torch.float32)[None, :, None]
+    dim = torch.arange(D_MODEL, dtype=torch.float32)[None, None, :]
+    return (board * 1000 + sq + dim / 100).expand(b, cache.SQUARES, D_MODEL).clone()
+
+
+def test_multi_module_cache_writes_each_layer_from_one_pass(tmp_path):
+    fens = [str(i) for i in range(5)]
+    calls = {"n": 0}
+
+    def capture(batch):
+        calls["n"] += 1
+        x = varying_capture(batch)
+        return {"layerA": x, "layerB": -x}             # two "layers" from the same forward pass
+
+    paths = cache.cache_activations_multi(
+        fens, capture, {"layerA": tmp_path / "a.npy", "layerB": tmp_path / "b.npy"},
+        d_model=D_MODEL, batch_size=2,
+    )
+    assert calls["n"] == 3                             # ceil(5/2) forward passes total, not per layer
+    a = cache.load_activations(paths["layerA"], flatten=False)
+    b = cache.load_activations(paths["layerB"], flatten=False)
+    assert torch.equal(a, varying_capture(fens)) and torch.equal(b, -varying_capture(fens))
+
+
+def test_fp16_cache_roundtrips_within_half_precision(tmp_path):
+    fens = [str(i) for i in range(3)]
+    path = cache.cache_activations(fens, varying_capture, tmp_path / "h.npy", d_model=D_MODEL,
+                                   dtype=np.float16)
+    loaded = cache.load_activations(path, flatten=False, in_memory=True)
+    assert loaded.dtype == torch.float16
+    assert torch.allclose(loaded.float(), varying_capture(fens), rtol=1e-3)
+
+
+def test_crash_mid_capture_leaves_no_complete_looking_cache(tmp_path):
+    import pytest
+    fens = [str(i) for i in range(6)]
+    path = tmp_path / "acts.npy"
+
+    def flaky(batch):
+        if "4" in batch:
+            raise RuntimeError("simulated crash")
+        return varying_capture(batch)
+
+    with pytest.raises(RuntimeError):
+        cache.cache_activations(fens, flaky, path, d_model=D_MODEL, batch_size=2)
+    # Neither the final .npy nor its manifest exist, so the next run regenerates from scratch.
+    assert not path.exists() and not path.with_suffix(".meta.json").exists()

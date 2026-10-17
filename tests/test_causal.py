@@ -1,63 +1,63 @@
-"""Causal-eval test, written FIRST (§3.5a). It exercises the patching HARNESS, which is a unit
-invariant that holds for ANY SAE weights — so it builds a fresh random TopKSAE in-memory and never
-touches a trained .pt artifact. It only needs the live net, so it skips until LEELA_SAE_CHECKPOINT
-and LEELA_SAE_RESID_MODULE are set. Then it goes red (NotImplementedError) -> green once you
-implement src/eval/causal.py.
-
-INTERP-SAFETY (§3.5 carve-out): the assertion below is the one you MUST sanity-check by hand. It
-encodes a no-op invariant — if a patch that changes nothing still reports a delta, the patching
-harness is broken and every "causal effect" you later measure is noise. Verify before trusting.
+"""Causal-harness tests. The harness invariants hold for ANY SAE weights, so they use a fresh random
+TopKSAE. INTERP-SAFETY: a harness that reports an effect when nothing was removed (or none when
+something was) fakes every causal result downstream — these are the checks to verify by hand.
 """
 
-import os
-
 import chess
-import pytest
-from lczerolens import LczeroBoard
+import torch
 
+from conftest import requires_net
 from src.eval import causal
-
-CHECKPOINT = os.environ.get("LEELA_SAE_CHECKPOINT")
-RESID_MODULE = os.environ.get("LEELA_SAE_RESID_MODULE")
-
-requires_causal_stack = pytest.mark.skipif(
-    not (CHECKPOINT and RESID_MODULE),
-    reason="set LEELA_SAE_CHECKPOINT and LEELA_SAE_RESID_MODULE (net + residual module name)",
-)
-
-STARTING_FEN = chess.STARTING_FEN
+from src.eval.codes import SparseCodes
+from src.sae import TopKSAE
 
 
-@pytest.fixture(scope="session")
-def model():
+def test_ablation_subtracts_exactly_the_feature_contribution():
+    # Error-preserving ablation: x -> x - f_i(x) * d_i. Everything else (other features AND the SAE
+    # reconstruction error) must be untouched, so (x - ablated) is exactly f_i(x) * d_i.
+    torch.manual_seed(0)
+    sae = TopKSAE(d_model=8, dict_size=32, k=4)
+    act = torch.randn(2, 64, 8)
+    feats = sae.encode(act.reshape(-1, 8))[0].reshape(2, 64, 32)
+    f = torch.tensor([int(feats[0].sum(0).argmax()), int(feats[1].sum(0).argmax())])   # active ones
+    out = causal._ablation_fn(sae, f)(act)
+    for b in range(2):
+        expected = feats[b, :, f[b], None] * sae.decoder.weight[:, f[b]][None, :]
+        assert torch.allclose(act[b] - out[b], expected, atol=1e-6)
+        assert (act[b] - out[b]).abs().sum() > 0          # an active feature really was removed
+
+
+def test_ablating_an_inactive_feature_is_an_exact_noop():
+    torch.manual_seed(0)
+    sae = TopKSAE(d_model=8, dict_size=32, k=4)
+    act = torch.randn(1, 64, 8)
+    feats = sae.encode(act.reshape(-1, 8))[0]
+    dead = int(torch.nonzero(feats.sum(0) == 0).flatten()[0])
+    assert torch.equal(causal._ablation_fn(sae, torch.tensor([dead]))(act), act)
+
+
+def test_matched_control_picks_closest_activation_mass_and_never_the_feature():
+    # One board, k=2. Feature 0 mass 5; feature 1 mass 4.5; feature 2 mass 1; feature 3 inactive.
+    idx = torch.zeros(1, 64, 2, dtype=torch.long)
+    val = torch.zeros(1, 64, 2)
+    idx[0, 0] = torch.tensor([0, 1]); val[0, 0] = torch.tensor([5.0, 4.5])
+    idx[0, 1] = torch.tensor([2, 3]); val[0, 1] = torch.tensor([1.0, 0.0])
+    codes = SparseCodes(idx, val, 4)
+    assert causal.matched_control(codes, 0, 0, torch.Generator().manual_seed(0)) == 1
+    assert causal.matched_control(codes, 0, 2, torch.Generator().manual_seed(0)) == 1   # |4.5-1| < |5-1|
+
+
+@requires_net
+def test_inactive_feature_has_zero_effect_and_active_one_has_some(model, resid_module):
     from src import hook
-    return hook.load_model(CHECKPOINT)
-
-
-@pytest.fixture(scope="session")
-def sae(model):
-    # No TRAINED checkpoint: the no-op invariant (scale=1.0 == identity) holds for ANY SAE weights,
-    # so a fresh random TopKSAE keeps this test free of build artifacts. Size it to the net's
-    # residual width (read off a real activation) so encode/decode shapes match the patched module,
-    # and match its device/dtype so the round-trip doesn't trip a type mismatch.
-    from src import hook
-    from src.sae import TopKSAE
-    resid = hook.get_residual_stream(model, STARTING_FEN, RESID_MODULE)   # (64, d_model)
-    sae = TopKSAE(d_model=resid.shape[-1], dict_size=4 * resid.shape[-1], k=32)
-    return sae.to(device=resid.device, dtype=resid.dtype).eval()
-
-
-@requires_causal_stack
-def test_identity_patch_is_a_noop(model, sae):
-    # NO-OP INVARIANT (hand-checkable): scale=1.0 multiplies the feature by 1 -> the activation is
-    # rewritten to ITSELF. patch_feature runs both batch rows through the same SAE round-trip and
-    # only rows 64: are touched (by *1), so clean (row 0) and dirty (row 1) are identical and the
-    # delta must be ~0. A nonzero delta means the harness perturbs the stream when it shouldn't —
-    # a silent bug that would fake causal effects everywhere else.
-    board = LczeroBoard(STARTING_FEN)
-    policy_delta, wdl_delta = causal.patch_feature(
-        model, sae, board, feature_idx=0, layer=RESID_MODULE, scale=1.0,
-    )
-    # patch_feature already returns abs deltas; max over all logits must stay at floor.
-    assert float(policy_delta.max()) < 1e-4
-    assert float(wdl_delta.max()) < 1e-4
+    fens = [chess.STARTING_FEN, "r1bqkb1r/1ppp1ppp/p1n2n2/4p3/B3P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 2 5"]
+    resid = hook.get_residual_stream_batch(model, fens, resid_module)          # (2, 64, 768)
+    sae = TopKSAE(768, 4 * 768, 32).to(resid.device).eval()
+    feats = sae.encode(resid.reshape(-1, 768))[0].reshape(2, 64, -1)
+    totals = feats.sum(1)                                                      # (2, F)
+    inactive = torch.tensor([int(torch.nonzero(totals[b] == 0).flatten()[0]) for b in range(2)])
+    strongest = totals.argmax(-1)
+    off = causal.ablation_effects(model, sae, resid_module, fens, inactive)
+    assert off["kl"].abs().max() == 0 and off["dq"].abs().max() == 0          # nothing removed
+    on = causal.ablation_effects(model, sae, resid_module, fens, strongest)
+    assert on["kl"].min() > 0                                                  # power: effect reaches heads
