@@ -1,6 +1,6 @@
 """Cache residual-stream activations for the Lichess TRAIN split, several layers from one forward pass.
 
-    uv run python scripts/cache_activations.py --layers 3 7 11 --n-boards 200000
+    uv run python scripts/02_cache_activations.py --layers 3 7 11 --n-boards 200000
 
 Writes outputs/acts/L{layer}_train.npy as (N, 64, 768) float16 (plus a .meta.json fingerprint).
 Canonical history-free encoding (hook.encode_fens) — the same input every other script uses.
