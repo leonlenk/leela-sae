@@ -1,146 +1,221 @@
-"""Load the Leela net, reproduce a move, and pull the per-square residual stream (🔒 — scaffold per §3.5).
+"""Load the Leela net, encode positions, read its heads, and capture / patch the per-square residual stream.
 
-Hooking stack (DESIGN.md §1): lczerolens loads the net (`LczeroModel.from_hf`), nnsight does the
-capture/patch. The exact residual-stream module name is NOT known in advance — you read it off
-`print(model)` in step 1. Nothing here may include or depend on the 8-position history stack.
+Facts about the net that this module relies on — each was verified empirically in the 2026-10 audit
+(probe scripts are summarised in RESULTS.md):
+
+  * ARCHITECTURE. BT3 encoder blocks are post-LayerNorm with a DeepNorm-style α≈0.427:
+        x1 = LN1(x + α·MHA(x)),   x2 = LN2(x1 + α·FFN(x1)).
+    So `encoderN/ln2`'s output IS the residual stream that enters block N+1 (its only consumers are
+    block N+1's Q/K/V, smolgen and skip connection). Patching it replaces block N+1's input exactly.
+  * TOKENS. The net flattens (B, 112, 8, 8) -> (B*64, C) with token t = rank*8 + file, in the
+    SIDE-TO-MOVE frame: for White token t == python-chess square t; for Black the board is flipped
+    vertically (ranks only), so token t == chess.square_mirror(t). See src/viz/features.token_to_square.
+    Note every token mixes in the whole board from layer 0 on (a dense board-level embedding term).
+  * POLICY HEAD. output["policy"] is RAW logits over lc0's 1858 move slots, INCLUDING illegal moves.
+    lc0 masks illegal moves out of its training loss, so those logits are untrained junk: on real
+    positions ~94% of a full 1858-way softmax lands on illegal slots. ALWAYS restrict to legal moves
+    (legal_log_probs) before a softmax, an argmax or a KL.
+  * CASTLING. lc0 encodes castling as king-takes-own-rook (e1h1 / e1a1). python-chess, and
+    lczerolens's get_legal_indices, use e1g1 / e1c1 — whose slots the net never puts mass on. Use
+    policy_index(), which remaps castling, never board.get_legal_indices().
+  * PROMOTIONS. lczerolens's decode_move drops the promotion piece and can return an illegal Move, so
+    we never decode indices; we score each legal Move and return the Move object itself.
+  * VALUE HEAD. output["wdl"] is already softmaxed: probabilities [W, D, L] from the side to move.
+  * INPUT. Classical 112 planes: 8 history slots × 13 planes (own P N B R Q K, enemy P N B R Q K,
+    repetition), then castling (us O-O-O, us O-O, them O-O-O, them O-O), black-to-move, the raw
+    rule-50 halfmove count, a zero plane and an all-ones plane. There is NO en-passant plane — lc0
+    infers ep from history — so under the history-free encoding below the net cannot see ep at all.
+
+HISTORY (DESIGN.md §1, CLAUDE.md): the canonical encoding everywhere is `encode_fens`, which builds a
+board from a bare FEN (no move stack) so all 8 history slots hold the CURRENT board. That is lc0's
+own convention for a position given as a FEN, and it makes every activation a function of the
+current board only. Real move history enters ONLY through the explicit `encode_boards_with_history`,
+used by src/eval/history_filter.py as a controlled perturbation.
 """
 
+from __future__ import annotations
+
+import contextlib
+from typing import Callable, Iterator, Sequence
+
+import chess
 import torch
-from nnsight import NNsight
-from lczerolens import LczeroModel
-from lczerolens import LczeroBoard
-from lczerolens.board import InputEncoding  
+from lczerolens import LczeroBoard, LczeroModel
+from lczerolens.board import InputEncoding
 
-def load_model(checkpoint: str = "lczerolens/BT3-768x15x24h-swa-2790000", filename: str ="model.onnx", device: str | None = None):
-    """Load a BT-series (transformer) Leela net from HuggingFace into a differentiable graph.
+DEFAULT_CHECKPOINT = "lczerolens/BT3-768x15x24h-swa-2790000"
+ENCODING = InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED
+HISTORY_PLANES = slice(13, 104)   # history slots 1..7 (slot 0 = planes 0:13 is the current board)
 
-    `checkpoint` is an HF repo id like "lczerolens/<name>". Do NOT hardcode a guess —
-    confirm the real id by loading it (DESIGN.md §1: the model card may be empty).
-    """
+
+# --------------------------------------------------------------------------------------------------
+# Loading + encoding
+# --------------------------------------------------------------------------------------------------
+
+def load_model(checkpoint: str = DEFAULT_CHECKPOINT, filename: str = "model.onnx", device: str | None = None):
+    """Load a BT-series (transformer) Leela net from the HF Hub (ONNX -> torch), frozen, in eval mode."""
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
-    model = LczeroModel.from_hf(repo_id=checkpoint, filename=filename)
-    return model.to(device)
+    model = LczeroModel.from_hf(repo_id=checkpoint, filename=filename).to(device).eval()
+    for p in model.parameters():
+        p.requires_grad_(False)   # we only ever read / patch activations, never train the net
+    return model
 
 
-def predict_move(model: LczeroModel, fen: str):
-    """Return the move Leela's policy head prefers for `fen` (its argmax over LEGAL moves).
+def model_device(model) -> torch.device:
+    return next(model.parameters()).device
 
-    This is the step-1 gate: this move must match Leela's actual move on known positions.
-    """
+
+def encode_fens(fens: Sequence[str]) -> torch.Tensor:
+    """Canonical, history-free encoding: (B, 112, 8, 8), current board copied into all 8 history slots."""
+    return torch.stack([LczeroBoard(fen).to_input_tensor(input_encoding=ENCODING) for fen in fens])
+
+
+def encode_boards_with_history(boards: Sequence[LczeroBoard]) -> torch.Tensor:
+    """EXPLICIT real-history encoding: (B, 112, 8, 8) built from each board's move stack (up to 7
+    previous positions; if the stack is shorter, the earliest position is repeated). Only the
+    history filter should call this."""
+    return torch.stack([b.to_input_tensor(input_encoding=ENCODING) for b in boards])
+
+
+# --------------------------------------------------------------------------------------------------
+# Policy head: legal moves only
+# --------------------------------------------------------------------------------------------------
+
+def policy_index(board: chess.Board, move: chess.Move) -> int:
+    """lc0 policy slot of a LEGAL move, with castling remapped to lc0's king-takes-rook convention."""
+    if board.is_castling(move):
+        rook_file = 7 if board.is_kingside_castling(move) else 0
+        move = chess.Move(move.from_square, chess.square(rook_file, chess.square_rank(move.from_square)))
+    return LczeroBoard.encode_move(move, board.turn)
+
+
+def legal_moves_and_indices(board: chess.Board) -> tuple[list[chess.Move], torch.Tensor]:
+    """All legal moves and their lc0 policy slots, in matching order. -> (list[Move], (n_legal,) long)."""
+    moves = list(board.legal_moves)
+    return moves, torch.tensor([policy_index(board, m) for m in moves], dtype=torch.long)
+
+
+def legal_log_probs(policy_logits: torch.Tensor, legal_idx: torch.Tensor) -> torch.Tensor:
+    """log-softmax restricted to the legal slots. (1858,) logits, (n_legal,) idx -> (n_legal,) log-probs."""
+    return torch.log_softmax(policy_logits[legal_idx.to(policy_logits.device)], dim=-1)
+
+
+def legal_kl(clean_logits: torch.Tensor, patched_logits: torch.Tensor, legal_idx: torch.Tensor) -> torch.Tensor:
+    """KL(clean || patched) over legal moves only, for ONE position. Scalar, in nats."""
+    lp = legal_log_probs(clean_logits, legal_idx)
+    lq = legal_log_probs(patched_logits, legal_idx)
+    return (lp.exp() * (lp - lq)).sum()
+
+
+def predict_move(model: LczeroModel, fen: str) -> chess.Move:
+    """Leela's policy-head move for `fen` (argmax over LEGAL moves; no search). Returns a legal Move."""
     board = LczeroBoard(fen)
-    device = next(model.parameters()).device
-    # Encode with history = the current board repeated across all 8 snapshots. A bare FEN has no
-    # move stack, so lczerolens's default `model(board)` ZEROS the history planes (13:104) — that
-    # is off-distribution for this history-using net and yields garbage (flat policy, ~100% draw).
-    # Repeating the current board is the standard convention for scoring a single static position.
-    board_input = board.to_input_tensor(input_encoding=InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED).to(device)
-    output = model(board_input)
-    legal_indices = board.get_legal_indices().to(device)
-    legal_policy = output["policy"][0].gather(0, legal_indices)
-    best_move_index = legal_indices[legal_policy.argmax()]
-    best_legal_move = board.decode_move(int(best_move_index))
-    return best_legal_move
+    moves, idx = legal_moves_and_indices(board)
+    policy = model(encode_fens([fen]).to(model_device(model)))["policy"][0]   # (1858,) raw logits
+    return moves[int(policy[idx.to(policy.device)].argmax())]
 
+
+# --------------------------------------------------------------------------------------------------
+# Residual stream: capture + patch (plain torch forward hooks; cross-checked against nnsight in tests)
+# --------------------------------------------------------------------------------------------------
 
 def list_residual_modules(model: LczeroModel) -> list[str]:
-    """Return candidate module names for the per-square residual stream, read off the model.
+    """Per-block residual-stream sites `module.encoderN/ln2`, ordered by N (see module docstring).
+    smolgen has its own ln2 inside the attention sublayer; it is not a residual site, so skip it."""
+    names = [n for n, _ in model.named_modules() if n.endswith("/ln2") and "encoder" in n and "smolgen" not in n]
+    return sorted(names, key=lambda n: int(n.split("encoder")[1].split("/")[0]))
 
-    On a BT3 transformer these are attention/MLP block outputs (names differ from the conv
-    SE-ResNet example in the docs). You eyeball `print(model)` and pick the post-block site.
+
+def _module(model, name: str) -> torch.nn.Module:
+    return dict(model.named_modules())[name]
+
+
+@contextlib.contextmanager
+def _hooks(model, fns: dict[str, Callable[[torch.Tensor], torch.Tensor | None]]) -> Iterator[None]:
+    handles = [_module(model, n).register_forward_hook(lambda m, i, o, f=f: f(o)) for n, f in fns.items()]
+    try:
+        yield
+    finally:
+        for h in handles:
+            h.remove()
+
+
+@torch.no_grad()
+def run_with_cache(model, inputs: torch.Tensor, modules: Sequence[str]) -> tuple[dict[str, torch.Tensor], dict]:
+    """One forward pass; returns ({module: (B, 64, D) activation}, {"policy": (B,1858), "wdl": (B,3)}).
+
+    The net reshapes its batch to (B*64, D) internally, so rows [b*64:(b+1)*64] belong to board b.
     """
-    names: list[str] = []
-    for name, _module in model.named_modules():
-        # ln2 is the last module before the skip, smolgen also has ln2
-        # but is an addition to attention and does not come before residual
-        if name.endswith("/ln2") and "encoder" in name and "smolgen" not in name:
-            names.append(name)  # e.g. "module.encoder7/ln2"
-    names.sort(key=lambda n: int(n.split("encoder")[1].split("/")[0]))
-    return names
+    B = inputs.shape[0]
+    store: dict[str, torch.Tensor] = {}
+
+    def saver(name):
+        def f(o):
+            store[name] = o.detach().reshape(B, 64, -1)
+            return None   # None = leave the output untouched
+        return f
+
+    with _hooks(model, {n: saver(n) for n in modules}):
+        out = model(inputs.to(model_device(model)))
+    return store, {"policy": out["policy"], "wdl": out["wdl"]}
+
+
+@torch.no_grad()
+def run_patched(model, inputs: torch.Tensor, module: str, fn: Callable[[torch.Tensor], torch.Tensor]) -> dict:
+    """Forward pass with `module`'s output replaced by fn(act), act being (B, 64, D). Returns heads."""
+    B = inputs.shape[0]
+
+    def patch(o):
+        new = fn(o.reshape(B, 64, -1))
+        return new.reshape(o.shape).to(o.dtype)
+
+    with _hooks(model, {module: patch}):
+        out = model(inputs.to(model_device(model)))
+    return {"policy": out["policy"], "wdl": out["wdl"]}
+
+
+def get_residual_stream_batch(model: LczeroModel, fens: Sequence[str], module_name: str) -> torch.Tensor:
+    """(B, 64, d_model) residual stream at `module_name` for many FENs in one pass (canonical encoding)."""
+    acts, _ = run_with_cache(model, encode_fens(fens), [module_name])
+    return acts[module_name]
 
 
 def get_residual_stream(model: LczeroModel, fen: str, module_name: str) -> torch.Tensor:
-    """Capture the residual-stream activation at `module_name` for one position.
-
-    Expected shape (B=1, 64, d_model): per-square == 64 "tokens" (a transformer net, NOT the
-    conv `[B, C, 8, 8]` layout). Squeeze the batch dim before returning -> (64, d_model).
-    """
-    board = LczeroBoard(fen)
-    device = next(model.parameters()).device
-    board_input = board.to_input_tensor(input_encoding=InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED).to(device)
-    nn_model = NNsight(model)
-    resid_module = nn_model.get(module_name)
-    with nn_model.trace(board_input):
-        resid = resid_module.output.save()  # (1, 64, d_model) batched / (64, d_model) for one board
-
-    return resid.squeeze(0)
+    """(64, d_model) residual stream at `module_name` for one FEN (canonical encoding)."""
+    return get_residual_stream_batch(model, [fen], module_name)[0]
 
 
-def get_residual_stream_batch(
-    model: LczeroModel, fens: list[str], module_name: str
-) -> torch.Tensor:
-    """Capture the residual stream for MANY positions in ONE forward pass -> (B, 64, d_model).
+# --------------------------------------------------------------------------------------------------
+# History diagnostic
+# --------------------------------------------------------------------------------------------------
 
-    This is the speed fix for caching (src/data/cache.py). The single-board get_residual_stream
-    above runs one net pass per FEN and rebuilds NNsight every call; cache_activations calls a
-    capture_fn once per chunk, so the way to go fast is to push the whole chunk through together.
-    Wire this in as the capture_fn (no batched_capture adapter needed): the cacher already speaks
-    the (list[str]) -> (B, 64, d_model) protocol.
-
-    Two invariants this MUST preserve, or every downstream feature is keyed off broken numbers:
-      * SAME input encoding as get_residual_stream — INPUT_CLASSICAL_112_PLANE_REPEATED, NOT the
-        raw board (whose default zeros the history planes and goes off-distribution).
-      * SAME activation site — module_name's output, unchanged. Never swap the layer here.
-    Unlike get_residual_stream this KEEPS the batch dim: row b corresponds to fens[b].
-    """
-
-    per_board = [
-        LczeroBoard(fen).to_input_tensor(
-            input_encoding=InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED
-        )
-        for fen in fens
-    ]                                              # B x (112, 8, 8)
-
-    device = next(model.parameters()).device
-    batched_input = torch.stack(per_board, dim=0).to(device)  # (B, 112, 8, 8)
-
-    nn_model = NNsight(model)
-    resid_module = nn_model.get(module_name)
-
-    with nn_model.trace(batched_input):
-        resid = resid_module.output.save()         # (B*64, d_model) — net collapses batch+square!
-
-    return resid.reshape(len(fens), 64, resid.shape[-1])  # (B, 64, d_model)
-
-
-def output_depends_on_history(model: LczeroModel, fen: str) -> dict[str, float]:
+@torch.no_grad()
+def output_depends_on_history(model: LczeroModel, fen: str, seed: int = 0) -> dict[str, float]:
     """DIAGNOSTIC (not a gate): how much does perturbing ONLY the history planes move the policy?
 
-    DESIGN.md §1/§5 (changed semantics): we KEEP a history-using net and control for history
-    downstream (hold history fixed when patching; filter features by history-randomization in
-    eval/history_filter.py). So this no longer pass/fails the net — it just *records the regime*.
-    We EXPECT nonzero deltas (empirically ~0.7 zeroing, ~3.3 randomizing on the look-ahead net).
-
-    Returns the magnitude of the policy-logit shift under two history perturbations, holding the
-    current board (planes 0:13) FIXED so any shift is attributable to history:
-        "zero_delta"      — history planes set to 0       (erase history)
-        "randomize_delta" — history planes set to U(0,1)  (scramble history)
-    Magnitude = max absolute change across the 1858 policy logits.
+    Baseline = canonical encoding (history slots == current board). We then overwrite planes 13:104
+    with zeros, or with U(0,1) noise, holding the current board (0:13) and aux planes (104:112) fixed.
+    Returns legal-move KL(baseline || perturbed) for each, plus whether the top legal move changed.
+    Both perturbations are far off-distribution — this records the regime, it is NOT a feature filter
+    (src/eval/history_filter.py compares against REAL game histories instead).
     """
     board = LczeroBoard(fen)
-    device = next(model.parameters()).device
-    # 112-plane input with all 8 history snapshots == the current board (no real move history).
-    # This is the clean baseline; the current board lives in planes 0:13, history in 13:104,
-    t_repeated = board.to_input_tensor(input_encoding=InputEncoding.INPUT_CLASSICAL_112_PLANE_REPEATED).to(device)
-    clean = model(t_repeated)["policy"][0]                                   # (1858,) baseline logits
+    _, idx = legal_moves_and_indices(board)
+    x = encode_fens([fen])[0]
+    assert x.ndim == 3 and x.shape[0] == 112, "plane slicing below assumes an unbatched (112, 8, 8) tensor"
 
-    # Perturb ONLY planes 13:104 (history); 0:13 (current board) and 104:112 (aux) stay FIXED.
-    t_zeroed = t_repeated.clone()
-    t_zeroed[13:104] = 0.0
-    zero_delta = (model(t_zeroed)["policy"][0] - clean).abs().max().item()   # max |Δlogit|
+    zeroed = x.clone()
+    zeroed[HISTORY_PLANES] = 0.0
+    noised = x.clone()
+    gen = torch.Generator().manual_seed(seed)
+    noised[HISTORY_PLANES] = torch.rand(noised[HISTORY_PLANES].shape, generator=gen)
 
-    t_randomized = t_repeated.clone()
-    t_randomized[13:104] = torch.rand_like(t_randomized[13:104])
-    randomize_delta = (model(t_randomized)["policy"][0] - clean).abs().max().item()
-
-    return {"zero_delta": zero_delta, "randomize_delta": randomize_delta}
+    pol = model(torch.stack([x, zeroed, noised]).to(model_device(model)))["policy"]   # (3, 1858)
+    top = [int(pol[i][idx.to(pol.device)].argmax()) for i in range(3)]
+    return {
+        "zero_kl": float(legal_kl(pol[0], pol[1], idx)),
+        "randomize_kl": float(legal_kl(pol[0], pol[2], idx)),
+        "zero_top1_changed": float(top[1] != top[0]),
+        "randomize_top1_changed": float(top[2] != top[0]),
+    }
