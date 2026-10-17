@@ -18,6 +18,7 @@ from __future__ import annotations
 import json
 import random
 import subprocess
+import tempfile
 from typing import Callable, Sequence
 
 import chess
@@ -66,13 +67,17 @@ DETECT_SCHEMA = {
 
 
 def claude_cli(model: str = "sonnet", timeout: int = 300) -> LLM:
-    """LLM backend via the Claude Code CLI (`claude -p`), tools disabled, structured JSON output."""
+    """LLM backend via the Claude Code CLI (`claude -p`, your logged-in account): our own system
+    prompt, no tools, no MCP servers, structured JSON output. Runs from an empty temp dir so no
+    project CLAUDE.md leaks into the labeler's context."""
+    workdir = tempfile.mkdtemp(prefix="autointerp_")
+
     def call(system: str, prompt: str, schema: dict) -> dict:
-        cmd = ["claude", "-p", "--bare", "--model", model, "--tools", "", "--no-session-persistence",
+        cmd = ["claude", "-p", "--model", model, "--tools", "", "--strict-mcp-config", "--no-session-persistence",
                "--output-format", "json", "--system-prompt", system, "--json-schema", json.dumps(schema)]
-        proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout)
+        proc = subprocess.run(cmd, input=prompt, capture_output=True, text=True, timeout=timeout, cwd=workdir)
         if proc.returncode != 0:
-            raise RuntimeError(f"claude CLI failed: {proc.stderr[:500]}")
+            raise RuntimeError(f"claude CLI failed: {(proc.stderr or proc.stdout)[:500]}")
         out = json.loads(proc.stdout)
         if out.get("is_error"):
             raise RuntimeError(f"claude CLI error: {out.get('result', '')[:500]}")

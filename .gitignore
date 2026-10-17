@@ -33,6 +33,9 @@ wandb/
 runs/
 *.png
 *.svg
+# ...except the write-up's figures
+!docs/figures/*.png
+!docs/figures/*.svg
 
 # Env / secrets
 .env

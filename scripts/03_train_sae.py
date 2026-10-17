@@ -32,6 +32,8 @@ def main():
     ap.add_argument("--tag", default="")
     ap.add_argument("--val-boards", type=int, default=500)
     ap.add_argument("--seed", type=int, default=0)
+    ap.add_argument("--lr", type=float, default=None, help="default: Gao et al. scaling rule")
+    ap.add_argument("--real-history", action="store_true", help="val acts with real game history (pair with a _realhist cache)")
     args = ap.parse_args()
 
     acts_path = Path(args.acts or f"outputs/acts/L{args.layer}_train.npy")
@@ -43,9 +45,13 @@ def main():
 
     model = hook.load_model()
     module = hook.list_residual_modules(model)[args.layer]
-    val_fens = lichess.load_corpus(CORPUS, split="val", limit=args.val_boards)["fen"].tolist()
-    val_acts = torch.cat([hook.get_residual_stream_batch(model, val_fens[s:s + 250], module).cpu()
-                          for s in range(0, len(val_fens), 250)]).reshape(-1, grouped.shape[-1])
+    val = lichess.load_corpus(CORPUS, split="val", limit=args.val_boards)
+    if args.real_history:
+        val_x = hook.encode_boards_with_history([lichess.board_with_history(h) for h in val["uci_history"]])
+    else:
+        val_x = hook.encode_fens(val["fen"].tolist())
+    val_acts = torch.cat([hook.run_with_cache(model, val_x[s:s + 250], [module])[0][module].cpu()
+                          for s in range(0, len(val_x), 250)]).reshape(-1, grouped.shape[-1])
     del model
     torch.cuda.empty_cache()
 
@@ -53,7 +59,7 @@ def main():
     d = acts.shape[-1]
     sae = TopKSAE(d, args.expansion * d, args.k)
     sae.init_pre_bias(acts[torch.randperm(acts.shape[0])[:200_000]])
-    config = {"epochs": args.epochs, "seed": args.seed}
+    config = {"epochs": args.epochs, "seed": args.seed, "lr": args.lr}
     t0 = time.time()
     sae, history = train.train(sae, acts, config, val_acts=val_acts)
     minutes = (time.time() - t0) / 60
@@ -62,6 +68,7 @@ def main():
     out = Path("outputs/sae", f"{name}.pt")
     out.parent.mkdir(parents=True, exist_ok=True)
     meta = {"layer": args.layer, "module": module, "acts": str(acts_path), "train_boards": int(grouped.shape[0]),
+            "real_history": args.real_history,
             "train_config": {**train.DEFAULTS, **config}, "minutes": minutes,
             "final": history[-1], "val_fvu": train.fvu(sae, val_acts)}
     sae.save(out, meta=meta, history=history)

@@ -12,7 +12,12 @@ Behaviour (splice recon into the net at the SAE's layer, read the heads; LEGAL m
         mean  — replace each token by the training-set mean activation AT THAT SQUARE (stricter: keeps
                 the typical activation, deletes everything position-specific).
     The original metric used zero-ablation with a softmax over all 1858 policy slots (94% of whose
-    mass sits on untrained illegal moves), which inflated it.
+    mass sits on untrained illegal moves), which inflated it. Caveat from the audit: BOTH ablations
+    destroy ~1 nat of policy at this post-LayerNorm site, so "recovered" is ~0.99 for nearly any
+    SAE. Headline the raw KL / top-1 / |dQ| instead, and compare against:
+  * noise reference — splice x + n, where n is isotropic Gaussian noise rescaled per token to the
+    SAME norm as the SAE's error (recon − x). If the SAE's error hurts more than equal-norm noise,
+    its mistakes are concentrated in directions the net actually uses.
 """
 
 from __future__ import annotations
@@ -33,7 +38,8 @@ def fidelity(model, sae, module: str, fens: Sequence[str], mean_act: torch.Tenso
     mean_act = mean_act.to(device).float()
     sx = sxx = serr = 0.0
     n_rows, l0_sum = 0, 0.0
-    per = {k: [] for k in ("kl_recon", "kl_zero", "kl_mean", "top1_recon", "top1_mean", "dq_recon")}
+    per = {k: [] for k in ("kl_recon", "kl_zero", "kl_mean", "kl_noise", "top1_recon", "top1_mean", "top1_noise", "dq_recon", "dq_noise")}
+    gen = torch.Generator(device=device).manual_seed(0)
     for s in range(0, len(fens), batch_size):
         chunk = list(fens[s:s + batch_size])
         x = hook.encode_fens(chunk)
@@ -52,17 +58,22 @@ def fidelity(model, sae, module: str, fens: Sequence[str], mean_act: torch.Tenso
         spliced = hook.run_patched(model, x, module, lambda _: recon)
         zeroed = hook.run_patched(model, x, module, torch.zeros_like)
         meaned = hook.run_patched(model, x, module, lambda t: mean_act.expand_as(t))
+        err_norm = (recon - a).norm(dim=-1, keepdim=True)                  # (B, 64, 1)
+        noise = torch.randn(a.shape, generator=gen, device=device)
+        noisy = a + noise / noise.norm(dim=-1, keepdim=True) * err_norm
+        noised = hook.run_patched(model, x, module, lambda _: noisy)
         for b, fen in enumerate(chunk):
             _, idx = hook.legal_moves_and_indices(chess.Board(fen))
             lp = hook.legal_log_probs(clean["policy"][b], idx)
             top = lp.argmax()
-            for name, out in (("recon", spliced), ("zero", zeroed), ("mean", meaned)):
+            for name, out in (("recon", spliced), ("zero", zeroed), ("mean", meaned), ("noise", noised)):
                 lq = hook.legal_log_probs(out["policy"][b], idx)
                 per[f"kl_{name}"].append(float((lp.exp() * (lp - lq)).sum()))
-                if name in ("recon", "mean"):
+                if name in ("recon", "mean", "noise"):
                     per[f"top1_{name}"].append(float(lq.argmax() == top))
             q = lambda w: w[0] - w[2]
             per["dq_recon"].append(float(q(spliced["wdl"][b]) - q(clean["wdl"][b])))
+            per["dq_noise"].append(float(q(noised["wdl"][b]) - q(clean["wdl"][b])))
 
     t = {k: torch.tensor(v) for k, v in per.items()}
     total_var = sxx - float((sx ** 2).sum()) / n_rows                # sum of squared deviations from mean
@@ -81,6 +92,10 @@ def fidelity(model, sae, module: str, fens: Sequence[str], mean_act: torch.Tenso
         "top1_agree_recon": float(t["top1_recon"].mean()),
         "top1_agree_mean_ablation": float(t["top1_mean"].mean()),
         "abs_dq_recon_mean": float(t["dq_recon"].abs().mean()),
+        "kl_noise_mean": float(t["kl_noise"].mean()),
+        "top1_agree_noise": float(t["top1_noise"].mean()),
+        "abs_dq_noise_mean": float(t["dq_noise"].abs().mean()),
+        "error_vs_noise_kl_ratio": float(kl_r / t["kl_noise"].mean()),
     }
 
 
