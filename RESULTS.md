@@ -36,7 +36,9 @@ Lichess games (never seen in SAE training or feature selection) unless stated ot
   capture probability by 6%. Two of four steering hypotheses held; two did not.
 - **History is not a big confound here.** Feeding real game history instead of the repeated
   current board barely changes the policy (median KL 0.005 nats) and 78–87% of features are
-  stable (activation correlation ≥ 0.9), including every feature named above. {HC_TLDR}
+  stable (activation correlation ≥ 0.9), including every feature named above. The filter does have
+  teeth: an SAE trained *with* real history learns a "the last move landed here" feature (F1 0.78),
+  and the filter rejects it (correlation 0.13).
 - **The original training data was the wrong data.** The 30k-FEN Hugging Face corpus looks like
   random play (no endgames, 41% of positions down ≥ 3 pawns). At equal budget, an SAE trained on it
   reconstructs real games far worse (FVU 0.29 vs 0.20) than one trained on Lichess positions.
@@ -212,7 +214,23 @@ move history and compared every feature's activation on every square.
 Every feature named in this document survives (correlation ≥ 0.94). The original SAE was far less
 stable: only 33% of its features survive.
 
-**Does the filter have power?** {HC_SECTION}
+**Does the filter have power?** A history-free SAE cannot contain history features, so it can't show
+that. Positive control, at layer 7 on 3000 test positions with ≥ 8 plies of history:
+
+- The residual stream does carry move history when it gets it: a linear probe for "the square the
+  last move landed on" reaches F1 0.94 with real history, 0.44 without (the board alone gives
+  partial clues, e.g. a piece that has just captured).
+- The history-free SAE has no feature for it (best F1 0.18, with or without history).
+- An SAE trained the same way on real-history activations (val FVU 0.157) does: feature 3879 tracks
+  the last move's destination with held-out F1 0.78. The filter rejects it — its activation
+  correlation between real and repeated history is 0.13, and without history its F1 falls to 0.04.
+
+![history](docs/figures/history.png)
+
+Overall survival is about the same for the two SAEs (85% vs 86%): most features that fail the 0.9
+bar are just sensitive to the small shift real history causes, not history detectors. The real
+history detectors show up as the small cluster near zero (14 features below 0.3 in the
+real-history SAE, 3 in the history-free one).
 
 ## 7. Across depth
 
