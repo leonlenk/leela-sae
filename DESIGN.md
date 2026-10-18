@@ -1,5 +1,17 @@
 # Leela SAE — Design Doc
 
+> **Status (October 2026): finished; results in [RESULTS.md](RESULTS.md).** This document is the
+> original plan, kept as written. What changed when it was carried out:
+> - The project was completed by Claude (audit → fixes → experiments → write-up), so the §3.5
+>   "you write the 🔒 bodies" contract no longer describes how the code was produced.
+> - Data: the HF FEN corpus was replaced by positions sampled from Lichess games (it turned out
+>   off-distribution); Ray and Accelerate were dropped as unnecessary on one GPU, so the repo
+>   skeleton in §5 no longer matches — see README.md for the actual layout.
+> - Hooking uses plain torch forward hooks (cross-checked against nnsight in the tests).
+> - `eval/history_filter.py` compares real game history against the history-free encoding; the
+>   U(0,1)-noise history idea in §1/§5 was rejected as far off-distribution.
+> - §7 checklist outcome is at the end of RESULTS.md.
+
 **Goal:** Train a sparse autoencoder on the residual stream of a Leela Chess Zero
 transformer net, and validate the learned features against chess ground truth
 (both correlational, via python-chess board properties, and causal, via the

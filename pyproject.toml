@@ -2,7 +2,7 @@
 name = "leela-sae"
 version = "0.1.0"
 description = "Train a sparse autoencoder on a Leela Chess Zero residual stream and validate features against chess ground truth."
-readme = "DESIGN.md"
+readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
     # --- core: hook + SAE (steps 1-2) ---
