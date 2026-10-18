@@ -10,7 +10,6 @@ import json
 from pathlib import Path
 
 import chess
-import chess.svg
 import matplotlib
 
 matplotlib.use("Agg")
@@ -172,7 +171,7 @@ def fig_layers(results_by_layer, out):
 
 def gallery_svg(feature, hits, title, out, n=6, size=200):
     """Row of boards (side-to-move view) with the firing square highlighted; caption per board."""
-    from src.viz.features import token_to_square
+    from src.viz.features import FIRES, figure_board, token_to_square
     pad, cap = 10, 34
     w, h = n * (size + pad) + pad, size + cap + 40
     parts = [f'<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{w}" height="{h}" '
@@ -181,7 +180,7 @@ def gallery_svg(feature, hits, title, out, n=6, size=200):
     for i, (fen, token, act) in enumerate(hits[:n]):
         board = chess.Board(fen)
         sq = token_to_square(fen, token)
-        svg = chess.svg.board(board, orientation=board.turn, fill={sq: "#f6c343cc"}, size=size, coordinates=False)
+        svg = figure_board(board, {sq: FIRES}, size=size)
         svg = svg.replace("<svg ", f'<svg x="{pad + i * (size + pad)}" y="34" ', 1)
         parts.append(svg)
         side = "White" if board.turn == chess.WHITE else "Black"
@@ -191,7 +190,12 @@ def gallery_svg(feature, hits, title, out, n=6, size=200):
     out.write_text("\n".join(parts))
 
 
-GALLERY = ["own_king_in_check", "enemy_hanging", "enemy_passed_pawn", "own_knight"]   # properties to show
+GALLERY = {                                       # property -> what the feature's top activations show
+    "own_king_in_check": "in check: fires on the side-to-move's king when it is in check",
+    "enemy_hanging": "enemy hanging: fires on loose enemy pieces the side to move can win",
+    "enemy_passed_pawn": "enemy passed pawn",
+    "own_knight": "own knight (piece identity, for comparison)",
+}
 
 
 def render_galleries(res):
@@ -207,9 +211,9 @@ def render_galleries(res):
     fens = lichess.load_corpus("outputs/positions/lichess_2024-06.parquet", split="test", limit=4000)["fen"].tolist()
     codes = encode_corpus(model, sae, res["module"], fens)
     row_of = {r["property"]: r for r in res["properties"]}
-    for prop in GALLERY:
-        f, f1 = row_of[prop]["feature"], row_of[prop]["test_f1"]
-        title = f"feature {f}: best single-feature match for '{prop.replace('_', ' ')}' (held-out F1 {f1:.2f}) — top activations"
+    for prop, what in GALLERY.items():
+        f = row_of[prop]["feature"]
+        title = f"feature {f} — {what}"
         gallery_svg(f, mine_feature(codes, fens, f, k=6), title, FIG / f"gallery_{prop}.svg")
 
 

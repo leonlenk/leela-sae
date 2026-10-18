@@ -66,58 +66,56 @@ control feature).
 
 ## Results
 
-Layer 7 of 15, a Top-K SAE with 6144 features (k = 32), trained on residual streams from 200k
-positions in Lichess games between players rated 2000+. Every number here is measured on held-out
-positions; [RESULTS.md](RESULTS.md) puts a baseline next to each and covers layers 3 and 11, move
-history, auto-interp and the audit. Boards are drawn from the side to move's point of view, and the
-example positions are picked by a fixed rule (the first test boards that qualify), not by hand.
+Layer 7 of 15, a Top-K SAE with 6144 features (k = 32), trained on 200k positions from Lichess games
+between 2000+ players. Every number and baseline is in [RESULTS.md](RESULTS.md).
 
-**1. The SAE is a decent stand-in for the layer.** It explains 85% of the residual variance;
-spliced into the net, Leela still picks the same move in 90% of positions.
+**How the SAE was checked.** First, it has to be a faithful stand-in for the layer: it explains 85%
+of the variance, and with it spliced in Leela still plays the same move in 90% of positions. Then a
+feature only counts if it passes three tests:
+- **It matches a chess property.** The feature is picked on one set of positions and scored on
+  another (held-out F1), next to a shuffled-label null and a linear probe on the same layer.
+- **Leela uses it (causal).** Removing it from the activation, with everything else kept, must change
+  Leela's moves more than removing a control feature of the same strength on the same board. For
+  concepts spread over many features: remove them as a group, or write one in where its property is
+  false and check that the moves shift as predicted.
+- **It isn't an artifact of the missing move history.** It must fire the same when Leela is given
+  the real game history (78–87% of features do).
 
-**2. "Which piece is on this square" features are near-perfect, and Leela uses them.** Each of the
-12 piece types (own / enemy × 6) has a single feature that matches it with held-out F1 ≈ 0.99.
-Below, the own-knight feature's strongest activations (yellow = the square it fires on):
+**What we learned.**
 
-![own-knight feature](docs/figures/gallery_own_knight.svg)
+1. **Piece identity is near-perfect and causal.** Each piece type has one feature with held-out
+   F1 ≈ 0.99. Removing the enemy-pawn feature, the one that mattered most in the first version,
+   raises Leela's evaluation for the side to move on 95% of boards (median +0.37 in
+   Q = P(win) − P(loss)), as if the enemy's pawns had vanished, and changes its top move on about a
+   quarter of them (here, the first four):
 
-Removing the enemy-pawn feature, the one that mattered most in the first version, makes Leela rate
-the position better for the side to move on 95% of boards (median change in Q = P(win) − P(loss):
-+0.37), as if the enemy's pawns had vanished. It changes the top move on about a quarter of them
-(29 of 128); here are the first four:
+   ![removing the enemy-pawn feature](docs/figures/example_ablation_enemy_pawn.svg)
 
-![removing the enemy-pawn feature](docs/figures/example_ablation_enemy_pawn.svg)
+2. **Computed concepts are in the SAE, but spread out, and they matter as groups.** Pins can be read
+   from the SAE's reconstruction as well as from the layer itself (probe F1 0.81), yet the best
+   single pin feature scores only 0.28: 9 of its 10 strongest activations are real pins, but only 60
+   of its top 100.
 
-**3. Computed concepts are there too, but spread over several features.** Check, hanging pieces,
-pins and passed pawns can't be read off a square's own input planes, yet linear probes find them in
-the residual stream (F1 0.80–0.99), and the SAE's reconstruction keeps them. A few have a clean
-single feature, like "my king is in check" (F1 0.75 here, 0.95 at layer 3):
+   ![pin feature](docs/figures/example_pins.svg)
 
-![in-check feature](docs/figures/gallery_own_king_in_check.svg)
+   Removing one such feature barely moves the policy (~10⁻⁴ nats); removing the 30 most associated
+   with "enemy piece hanging" makes Leela about 20% less likely to capture the hanging piece (a
+   matched control: no change). For pins, the same group removal had only a small effect. "In check" has
+   a clean feature (F1 0.75; 0.95 at layer 3), and writing it onto a king that isn't in check (at 3× its
+   usual strength) makes king moves 47% more likely.
 
-Most are split across many features, and the group matters more than any one of them: removing the
-30 features most associated with "enemy piece hanging" makes Leela about 20% less likely to capture
-the hanging piece (an activation-matched control: no change). Writing the in-check feature onto a
-king that isn't in check, at 3× its usual strength, raises the probability of king moves by 47%
-(a relative increase).
+3. **The board can be read back from the features almost perfectly, which proves little here.**
+   With the metric of [Karvonen et al. (2024)](https://arxiv.org/abs/2408.00113), the features
+   rebuild the board with F1 0.98, every square right on 61% of boards (red = read wrong):
 
-**4. The board can be read back from the features almost perfectly, but in Leela that proves
-little.** With the metric of [Karvonen et al. (2024)](https://arxiv.org/abs/2408.00113), layer-7
-features rebuild the board with F1 0.98 and get every square right on 61% of test boards (red = a
-square read wrong):
+   ![board reconstruction](docs/figures/example_reconstruction.svg)
 
-![board reconstruction](docs/figures/example_reconstruction.svg)
+   But Leela is *given* the board: an SAE on an untrained copy of the net does as well. Training
+   shows instead in square-agnostic features (79 features cover all 668 piece-on-square properties;
+   the untrained net needs 608) and in computed ones (a check detector: 0.94 vs 0.19).
 
-But Leela is *given* the board, and an SAE on an untrained, freshly initialized copy of the net
-does as well. What training changes is the form of the features, and the computed properties. In
-the trained net, 79 square-agnostic features (one "own knight", wherever it stands) are the best
-match for all 668 piece-on-square properties; the untrained net's SAE needs 608. And the trained
-net's SAE has a check detector (coverage 0.94), the untrained one does not (0.19).
-
-**5. The data mattered; move history didn't much.** The original Hugging Face corpus looked like
-random play: an SAE trained on it reconstructs real games much worse than one trained on Lichess
-positions (FVU 0.29 vs 0.20 at equal budget). Feeding Leela real move history instead of the
-repeated current board leaves 78–87% of features unchanged, including every concept feature above.
+4. **The original data was the wrong data.** The Hugging Face corpus looked like random play; an SAE
+   trained on it reconstructs real games much worse (FVU 0.29 vs 0.20 at equal budget).
 
 ## Who did what
 
@@ -190,7 +188,7 @@ Everything below ran on one 8 GB laptop GPU (RTX 5050); times are for that machi
 | 12 | `scripts/12_joint_ablation.py --sae outputs/sae/L7.pt` | Remove a concept's top-n features together; does the policy change? | 10 min |
 | 13 | `scripts/13_board_reconstruction.py outputs/sae/*.pt` | Karvonen et al. (2024) coverage + board reconstruction, with probe baseline; untrained-net controls come from `02`/`03` with `--random-weights 0 --random-init {permute,fresh}` | 5 min / SAE |
 | 14 | `scripts/14_reconstruction_checks.py` | Checks on 13: the paper's exact protocol, trivial baselines for the strategy set, token collapse in the random nets | 10 min |
-| 15 | `scripts/15_example_boards.py` | Example boards for this README: enemy-pawn ablation, board reconstruction | 3 min |
+| 15 | `scripts/15_example_boards.py` | Example boards for this README: enemy-pawn ablation, pins, board reconstruction | 3 min |
 
 Artifacts (positions, activation caches, SAEs, JSON results) go to `outputs/`. Only
 `outputs/results/` (the JSON and markdown behind every number in RESULTS.md) is committed. The

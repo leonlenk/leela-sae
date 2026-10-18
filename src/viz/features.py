@@ -32,6 +32,17 @@ CHESSCOM_COLORS = {
 }
 HIGHLIGHT = "#f6c343cc"          # warm amber w/ alpha — the "this square fired" marker
 
+# Figures in the write-up: a neutral grey board, so one saturated colour reads as "this square"
+# (amber on wood-coloured squares was hard to see). FIRES is the aqua categorical slot.
+FIGURE_COLORS = {"square light": "#f2f1ec", "square dark": "#c3c2b7"}
+FIRES = "#1baf7ae6"
+
+
+def figure_board(board: chess.Board, fill: dict | None = None, arrows=(), size: int = 200) -> str:
+    """Side-to-move view of `board` in the figure style, with squares filled and arrows drawn."""
+    return chess.svg.board(board, orientation=board.turn, fill=fill or {}, arrows=list(arrows),
+                           colors=FIGURE_COLORS, size=size, coordinates=False)
+
 
 def token_to_square(fen: str, token: int) -> int:
     """Map a Leela residual-stream token index (0..63) to the python-chess square it covers.

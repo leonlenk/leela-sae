@@ -3,7 +3,11 @@
     uv run python scripts/15_example_boards.py       # needs outputs/sae/L7.pt and the corpus; ~3 min
 
 All boards are Lichess TEST positions, picked by a fixed rule (stated in each figure's title), not by
-hand. Two SVGs in docs/figures/, and the numbers behind them in outputs/results/example_boards.json:
+hand. Three SVGs in docs/figures/, and the numbers behind them in outputs/results/example_boards.json:
+
+  * example_pins.svg — the strongest activations of the layer-7 feature that best matches "own
+    piece pinned" (selected on validation boards in scripts/04), marked by whether the piece really
+    is pinned, with the pin line drawn. Plus the share of real pins among its top 10 / 100 firings.
 
   * example_ablation_enemy_pawn.svg — remove the enemy-pawn feature (error-preserving, as in §5)
     from every square where it fires; Leela's top move before vs after, and the value Q = W − L.
@@ -26,13 +30,14 @@ from src.eval import board_reconstruction as br
 from src.eval import causal
 from src.eval.codes import encode_corpus
 from src.sae import TopKSAE
-from src.viz.features import token_to_square
+from src.eval.feature_mining import mine_feature
+from src.viz.features import FIRES, figure_board, token_to_square
 
 FIG, RES = Path("docs/figures"), Path("outputs/results")
 CORPUS = "outputs/positions/lichess_2024-06.parquet"
 SURFACE, INK, INK2 = "#fcfcfb", "#0b0b0b", "#52514e"
 BEFORE, AFTER = "#2a78d6cc", "#eb6834cc"            # validated categorical slots 1 and 2 (blue, orange)
-FIRES, WRONG = "#f6c343cc", "#e5484dbb"
+PIN_LINE, WRONG = "#eb6834e6", "#e5484dbb"
 SIZE, PAD, CAP_LINE = 210, 14, 16
 
 
@@ -58,8 +63,7 @@ def compose(title: str, rows: list[list[tuple[str, list[str]]]], out: Path):
 
 
 def board_svg(board, fill=None, arrows=()):
-    return chess.svg.board(board, orientation=board.turn, fill=fill or {}, arrows=list(arrows),
-                           size=SIZE, coordinates=False)
+    return figure_board(board, fill, arrows, SIZE)
 
 
 def side(board):
@@ -111,6 +115,33 @@ def ablation_examples(model, sae, module, fens, codes, feature, n=4):
              "abs_dq_median": float(dq.abs().median()), "dq_median": float(dq.median()),
              "frac_q_rises": float((dq > 0).float().mean())}
     return panels, rows, stats
+
+
+def pin_examples(fens, codes, feature, n=5):
+    """Strongest activations of the pin feature: is the piece on that square really pinned?"""
+    def pinned(fen, token):
+        board = chess.Board(fen)
+        sq = token_to_square(fen, token)
+        piece = board.piece_at(sq)
+        return board, sq, piece, piece is not None and piece.color == board.turn and board.is_pinned(board.turn, sq)
+
+    hits = mine_feature(codes, fens, feature, k=100)
+    real = [pinned(fen, tok)[3] for fen, tok, _ in hits]
+    panels = []
+    for fen, tok, act in hits[:n]:
+        board, sq, piece, is_pin = pinned(fen, tok)
+        arrows = []
+        if is_pin:
+            king = board.king(board.turn)
+            pinner = next(s for s in board.pin(board.turn, sq) if board.color_at(s) == (not board.turn))
+            arrows = [chess.svg.Arrow(pinner, king, color=PIN_LINE)]
+        what = f"{'white' if piece.color else 'black'} {chess.piece_name(piece.piece_type)}" if piece else "empty square"
+        panels.append((board_svg(board, {sq: FIRES}, arrows), [
+            f"{'✓ pinned' if is_pin else '✗ not pinned'}: {what} {chess.square_name(sq)}",
+            f"{side(board)} to move · activation {act:.2f}"]))
+    stats = {"feature": feature, "pinned_share_top10": sum(real[:10]) / max(1, len(real[:10])),
+             "pinned_share_top100": sum(real) / max(1, len(real)), "n_hits": len(real)}
+    return panels, stats
 
 
 def describe(c, board):
@@ -169,9 +200,14 @@ def main():
     codes = encode_corpus(model, sae, module, fens)
     out = {}
 
+    panels, stats = pin_examples(fens, codes, feat["own_pinned"])
+    out["pins"] = stats
+    compose(f"Feature {feat['own_pinned']}, the best single match for 'own piece pinned': its strongest "
+            "activations (green = where it fires, orange = the pin)", [panels], FIG / "example_pins.svg")
+
     panels, rows, stats = ablation_examples(model, sae, module, fens, codes, feat["enemy_pawn"])
     out["ablation_enemy_pawn"] = {**stats, "boards": rows}
-    compose(f"Removing the enemy-pawn feature ({feat['enemy_pawn']}, yellow = where it fires): Leela's top move, "
+    compose(f"Removing the enemy-pawn feature ({feat['enemy_pawn']}; green = where it fires): Leela's top move, "
             "blue before, orange after", [panels], FIG / "example_ablation_enemy_pawn.svg")
 
     panels, rows, stats = reconstruction_examples(model, sae, module)

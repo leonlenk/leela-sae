@@ -1,4 +1,10 @@
 {
+ "pins": {
+  "feature": 3918,
+  "pinned_share_top10": 0.9,
+  "pinned_share_top100": 0.6,
+  "n_hits": 100
+ },
  "ablation_enemy_pawn": {
   "feature": 2024,
   "n_active_boards": 128,
