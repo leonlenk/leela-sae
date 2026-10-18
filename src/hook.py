@@ -228,7 +228,8 @@ def randomize_weights(model, seed: int = 0, mode: str = "permute", min_numel: in
     mode="permute": randomly permute the entries of every floating-point weight tensor with
         >= min_numel entries. Keeps each tensor's value distribution (trained-scale weights) but
         destroys everything learned. In this post-LN net that drives strong token mixing: by layer 7
-        all 64 tokens collapse to one vector, so per-square information is lost.
+        all 64 tokens collapse to (nearly) one vector, so no token says where a piece is, though
+        that shared vector still carries a coarse summary of the board (scripts/14).
     mode="fresh": a conventional fresh init — weight matrices ~ N(0, std), vectors (biases) 0,
         LayerNorm gains 1. Small weights make each block close to the identity, so the input board
         passes through nearly untouched (a linear probe still reads every square at layer 7).

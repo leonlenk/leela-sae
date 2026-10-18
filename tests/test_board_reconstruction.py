@@ -88,3 +88,59 @@ def test_strategy_coverage_oracle_check_feature_scores_one():
     cov = br.strategy_coverage(codes, per_square, board, br.feature_max(codes))
     assert cov["check"] == 1.0
     assert "pin" not in cov                                       # no positives -> not scored
+
+
+def test_start_square_mask_covers_exactly_the_32_starting_pieces_for_both_colours():
+    # In the starting position every piece is on its starting square; with Black to move the board
+    # is mirrored into the same own/enemy frame, so the same 32 (token, class) entries are covered.
+    mask = br.start_square_mask()
+    assert int(mask.sum()) == 32
+    for fen in (chess.STARTING_FEN, chess.STARTING_FEN.replace(" w ", " b ")):
+        g = br.piece_grid([fen])[0]
+        occupied = g > 0
+        assert mask[torch.arange(64)[occupied], g[occupied]].all()
+    assert mask[3, 5] and not mask[4, 5]                          # own queen starts on d1, not e1
+
+
+def test_ignored_start_square_piece_is_not_scored():
+    # Truth: own knights on b1 (token 1, a starting square) and e4 (token 28). Prediction: only e4.
+    labels = torch.zeros(1, 64, dtype=torch.long)
+    labels[0, 1] = labels[0, 28] = 2
+    pred = torch.zeros(1, 64, br.N_CLASSES, dtype=torch.bool)
+    pred[0, 28, 2] = True
+    assert abs(br.score_boards(pred, labels)["f1"] - 2 / 3) < 1e-9      # tp=1, fn=1
+    s = br.score_boards(pred, labels, ignore=br.start_square_mask())
+    assert s["f1"] == 1.0 and s["exact_board_rate"] == 1.0              # the b1 knight is unscored
+
+
+def test_per_board_best_f1_takes_each_boards_best_threshold():
+    # Two boards with an own king on token 4. Threshold A gets board 0 right and predicts nothing on
+    # board 1; threshold B the reverse. Each threshold averages F1 0.5; Eq. 5 (best per board) gives 1.
+    labels = torch.zeros(2, 64, dtype=torch.long)
+    labels[:, 4] = 6
+    a = torch.zeros(2, 64, br.N_CLASSES, dtype=torch.bool)
+    b = a.clone()
+    a[0, 4, 6] = b[1, 4, 6] = True
+    assert br.score_boards(a, labels)["f1"] == 0.5 == br.score_boards(b, labels)["f1"]
+    assert br.per_board_best_f1([a, b], labels) == 1.0
+
+
+def test_best_feature_sharing_oracle_has_one_feature_per_class():
+    # Oracle codes: feature c fires iff class c is on the token. In the starting position 32 BSPs
+    # occur, all 12 classes appear, and the own-pawn feature is the best match on its 8 squares.
+    labels = br.piece_grid([chess.STARTING_FEN])
+    codes = oracle_codes(labels)
+    s = br.best_feature_sharing(codes, labels, br.feature_max(codes), 0.0)
+    assert s == {"n_bsps": 32, "n_distinct_best_features": 12, "max_bsps_per_feature": 8}
+
+
+def test_always_fires_f1_is_2p_over_1_plus_p():
+    # Board-level base rate 1/4 -> 2(0.25)/1.25 = 0.4. Per square: token 0 positive on 2 of 4 boards
+    # (-> 2/3), token 1 on 4 of 4 (-> 1), the other 62 tokens never positive (not averaged).
+    board = {"check": torch.tensor([True, False, False, False]), "never": torch.zeros(4, dtype=torch.bool)}
+    y = torch.zeros(4, 64, dtype=torch.bool)
+    y[:2, 0] = True
+    y[:, 1] = True
+    out = br.always_fires_f1({"sq": y}, board)
+    assert abs(out["check"] - 0.4) < 1e-9 and "never" not in out
+    assert abs(out["sq"] - (2 / 3 + 1) / 2) < 1e-9
