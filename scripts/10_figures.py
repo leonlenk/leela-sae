@@ -191,7 +191,30 @@ def gallery_svg(feature, hits, title, out, n=6, size=200):
     out.write_text("\n".join(parts))
 
 
+GALLERY = ["own_king_in_check", "enemy_hanging", "enemy_passed_pawn", "own_knight"]   # properties to show
+
+
+def render_galleries(res):
+    """Top activations (Lichess test boards) of the features named in GALLERY, as SVG rows."""
+    from src import hook
+    from src.data import lichess
+    from src.eval.codes import encode_corpus
+    from src.eval.feature_mining import mine_feature
+    from src.sae import TopKSAE
+
+    sae = TopKSAE.load("outputs/sae/L7.pt")
+    model = hook.load_model()
+    fens = lichess.load_corpus("outputs/positions/lichess_2024-06.parquet", split="test", limit=4000)["fen"].tolist()
+    codes = encode_corpus(model, sae, res["module"], fens)
+    row_of = {r["property"]: r for r in res["properties"]}
+    for prop in GALLERY:
+        f, f1 = row_of[prop]["feature"], row_of[prop]["test_f1"]
+        title = f"feature {f}: best single-feature match for '{prop.replace('_', ' ')}' (held-out F1 {f1:.2f}) — top activations"
+        gallery_svg(f, mine_feature(codes, fens, f, k=6), title, FIG / f"gallery_{prop}.svg")
+
+
 def main():
+    import sys
     FIG.mkdir(parents=True, exist_ok=True)
     by_layer = {}
     for L in (3, 7, 11):
@@ -203,6 +226,8 @@ def main():
                 if probes_ and row["property"] in probes_:
                     row.update(probes_[row["property"]])
             by_layer[L] = rescore(r)
+    if 7 in by_layer and "--galleries" in sys.argv:
+        render_galleries(by_layer[7])
     if 7 in by_layer:
         fig_correlational(by_layer[7], FIG / "correlational_L7.png")
         fig_causal(by_layer[7], FIG / "causal_L7.png")
