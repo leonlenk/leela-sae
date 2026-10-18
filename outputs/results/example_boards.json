@@ -1,0 +1,93 @@
+{
+ "ablation_enemy_pawn": {
+  "feature": 2024,
+  "n_active_boards": 128,
+  "top1_changed": 29,
+  "abs_dq_median": 0.37156185507774353,
+  "dq_median": 0.37156185507774353,
+  "frac_q_rises": 0.953125,
+  "boards": [
+   {
+    "fen": "r2q1rk1/pp4pp/2n1bb2/3p1p2/3PnB2/P1NB1N2/1P3PPP/R2QR1K1 w - - 1 14",
+    "before": [
+     "d3b5",
+     0.4648062288761139
+    ],
+    "after": [
+     "a1c1",
+     0.3127859830856323
+    ],
+    "q_before": 0.03806982934474945,
+    "q_after": 0.4752469062805176
+   },
+   {
+    "fen": "r5k1/pp3pp1/2n2q1p/2P5/1b1P4/PQN2P2/1P2KP1P/3R3R b - - 0 16",
+    "before": [
+     "b4c3",
+     0.3341869115829468
+    ],
+    "after": [
+     "a8e8",
+     0.32788369059562683
+    ],
+    "q_before": -0.8755995631217957,
+    "q_after": -0.21976043283939362
+   },
+   {
+    "fen": "rnq1kb1r/pb4pp/1p2pn2/2pp1p2/2PP1N2/4P1P1/PP3PBP/RNBQ1RK1 b kq - 0 9",
+    "before": [
+     "d5c4",
+     0.37563201785087585
+    ],
+    "after": [
+     "f8d6",
+     0.35004645586013794
+    ],
+    "q_before": -0.3552686274051666,
+    "q_after": -0.054339006543159485
+   },
+   {
+    "fen": "2rr2k1/1b2q1bp/ppn3p1/4pp2/1P2N3/P3P3/1B2BPPP/1Q1R1RK1 w - - 0 25",
+    "before": [
+     "e4c3",
+     0.4479586184024811
+    ],
+    "after": [
+     "e4g3",
+     0.24219869077205658
+    ],
+    "q_before": 0.16014167666435242,
+    "q_after": 0.7235982418060303
+   }
+  ]
+ },
+ "reconstruction": {
+  "t": 0.5,
+  "n_train_boards": 15497,
+  "boards": [
+   {
+    "fen": "5k2/1R5p/4n1p1/p3P1P1/r1K1P3/2NR4/2r5/8 w - - 1 39",
+    "rebuilt_fen": "5k2/1R5p/4n1p1/p3P1P1/r1K1P3/2NR4/2r5/8",
+    "board_f1": 0.9333333333333333,
+    "errors": [
+     "d3: white rook, also read as bishop",
+     "b7: white rook, also read as queen"
+    ]
+   },
+   {
+    "fen": "r2q1rk1/pp4pp/2n1bb2/3p1p2/3PnB2/P1NB1N2/1P3PPP/R2QR1K1 w - - 1 14",
+    "rebuilt_fen": "r2q1rk1/pp4pp/2n1bb2/3p1p2/3PnB2/P1NB1N2/1P3PPP/R2QR1K1",
+    "board_f1": 1.0,
+    "errors": []
+   },
+   {
+    "fen": "r5k1/pp3pp1/2n2q1p/2P5/1b1P4/PQN2P2/1P2KP1P/3R3R b - - 0 16",
+    "rebuilt_fen": "r5k1/pp3pp1/2n2q1p/2P3B1/1b1P4/PQN2P2/1P2KP1P/3R3R",
+    "board_f1": 0.9777777777777777,
+    "errors": [
+     "g5: extra white bishop"
+    ]
+   }
+  ]
+ }
+}

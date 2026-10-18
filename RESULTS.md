@@ -457,5 +457,5 @@ separately. The checks in this section beyond scripts/13 come from
 
 ## Reproduce
 
-See [README.md](README.md) — `scripts/00` … `scripts/14` regenerate every number and figure here
+See [README.md](README.md) — `scripts/00` … `scripts/15` regenerate every number and figure here
 (≈ 5 hours on an 8 GB laptop GPU, plus ~2 GB of downloads and ~120 GB of activation caches).
