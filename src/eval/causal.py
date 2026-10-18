@@ -191,3 +191,50 @@ def active_quantile(codes: SparseCodes, feature: int, q: float = 0.9) -> float:
     v = codes.val[codes.idx == feature]
     v = v[v > 0]
     return float(v.quantile(q)) if v.numel() else 0.0
+
+
+# --------------------------------------------------------------------------------------------------
+# Joint ablation: remove a SET of features at once. A concept split across several features can
+# survive the removal of any one of them (redundancy); removing the whole set tells redundancy apart
+# from "later layers recompute it from the board".
+# --------------------------------------------------------------------------------------------------
+
+def _ablation_fn_sets(sae, mask: torch.Tensor):
+    """Remove every feature f with mask[b, f] from board b (error-preserving). mask: (B, F) bool."""
+    W = sae.decoder.weight                                                   # (D, F)
+
+    def fn(act):
+        B, T, D = act.shape
+        feats = sae.encode(act.reshape(-1, D))[0].reshape(B, T, -1)          # (B, 64, F)
+        removed = (feats * mask.to(act.device)[:, None, :]) @ W.T            # (B, 64, D)
+        return act - removed
+    return fn
+
+
+@torch.no_grad()
+def joint_ablation_effects(model, sae, module: str, fens: list[str], feature_sets: list[list[int]],
+                           target_tokens: list[list[int]], batch_size: int = 64) -> dict[str, torch.Tensor]:
+    """Per board: KL and change in log P(moves touching target_tokens[b]) after removing feature_sets[b]."""
+    sae = sae.to(hook.model_device(model)).eval()
+    F = sae.decoder.weight.shape[1]
+    kl, dlogp = [], []
+    for s in range(0, len(fens), batch_size):
+        chunk = fens[s:s + batch_size]
+        mask = torch.zeros(len(chunk), F, dtype=torch.bool)
+        for b, fs in enumerate(feature_sets[s:s + batch_size]):
+            mask[b, fs] = True
+        x = hook.encode_fens(chunk)
+        clean = model(x.to(hook.model_device(model)))
+        patched = hook.run_patched(model, x, module, _ablation_fn_sets(sae, mask))
+        for b, fen in enumerate(chunk):
+            _, idx = hook.legal_moves_and_indices(chess.Board(fen))
+            lp = hook.legal_log_probs(clean["policy"][b], idx)
+            lq = hook.legal_log_probs(patched["policy"][b], idx)
+            kl.append(float((lp.exp() * (lp - lq)).sum()))
+            tm = _target_moves(fen, target_tokens[s + b])
+            if tm and len(tm) < len(idx):          # all-moves target sets carry no information
+                t = torch.tensor(tm, device=lp.device)
+                dlogp.append(float(torch.logsumexp(lq[t], 0) - torch.logsumexp(lp[t], 0)))
+            else:
+                dlogp.append(float("nan"))
+    return {"kl": torch.tensor(kl), "target_dlogp": torch.tensor(dlogp)}

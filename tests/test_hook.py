@@ -63,14 +63,18 @@ def test_legal_kl_is_zero_for_identical_and_positive_for_different_logits():
 
 
 def test_canonical_encoding_repeats_current_board_and_has_no_history():
-    # A FEN built after real moves still encodes as current-board x 8: encode_fens never sees a stack.
+    # encode_fens builds boards from bare FENs (no move stack), so every history slot is a copy of the
+    # current board. (The real-history path is exercised by tests/test_lichess.py and the history
+    # filter; this test only pins the canonical encoding.)
     x = hook.encode_fens([RUY_LOPEZ])[0]                 # (112, 8, 8)
     for slot in range(1, 8):
         assert torch.equal(x[slot * 13:(slot + 1) * 13 - 1], x[0:12])   # piece planes repeat
 
 
 def test_input_planes_put_square_s_at_token_s_in_side_to_move_frame():
-    # The net transposes (112,8,8) -> (8,8,112) and flattens to 64 tokens, so token = row*8 + col.
+    # Checks the INPUT layout only: plane cell (row, col) is square row*8+col in the side-to-move frame.
+    # That the net's internal tokens follow the same order (its first op transposes (112,8,8) ->
+    # (8,8,112) and flattens) is checked end to end by the canary in tests/test_features.py.
     # Plane 5 = OWN king, plane 11 = ENEMY king. Hand-checkable: white K on g1 (sq 6), black k on g8.
     white_to_move = hook.encode_fens(["6k1/8/8/8/8/8/8/6K1 w - - 0 1"])[0]
     tok_of = lambda plane: int(plane.flatten().nonzero())
@@ -124,8 +128,9 @@ def test_residual_stream_is_per_square(model, resid_module):
 
 @requires_net
 def test_capture_matches_nnsight(model, resid_module):
-    # Independent capture path (DESIGN.md's original nnsight hooking) must give the same numbers, for
-    # both colours to move — guards the (B*64, D) -> (B, 64, D) reshape and the board order.
+    # Independent capture path (DESIGN.md's original nnsight hooking) must give the same numbers. Both
+    # sides use the same (B*64, D) -> (B, 64, D) reshape, so this guards the hook mechanics, not the
+    # board/token split — test_batch_matches_one_by_one guards that. Uses both colours to move.
     from nnsight import NNsight
     fens = [RUY_LOPEZ, BLACK_TO_MOVE]
     ours = hook.get_residual_stream_batch(model, fens, resid_module)
@@ -170,3 +175,12 @@ def test_history_dependence_is_measured_and_reported(model):
     d = hook.output_depends_on_history(model, RUY_LOPEZ)
     assert set(d) == {"zero_kl", "randomize_kl", "zero_top1_changed", "randomize_top1_changed"}
     assert d["zero_kl"] > 0 and d["randomize_kl"] > 0
+
+
+def test_promotion_slots_match_lc0_including_knight_underpromotion():
+    # lc0 has explicit slots for q/r/b promotions; a KNIGHT promotion uses the plain from-to slot.
+    b = chess.Board("8/P6k/8/8/8/8/8/K7 w - - 0 1")
+    plain = LczeroBoard.encode_move(chess.Move.from_uci("a7a8"), chess.WHITE)
+    assert hook.policy_index(b, chess.Move.from_uci("a7a8n")) == plain
+    slots = {p: hook.policy_index(b, chess.Move.from_uci("a7a8" + p)) for p in "qrbn"}
+    assert len(set(slots.values())) == 4                 # four promotions, four distinct slots

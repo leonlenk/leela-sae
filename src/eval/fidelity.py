@@ -13,7 +13,7 @@ Behaviour (splice recon into the net at the SAE's layer, read the heads; LEGAL m
                 the typical activation, deletes everything position-specific).
     The original metric used zero-ablation with a softmax over all 1858 policy slots (94% of whose
     mass sits on untrained illegal moves), which inflated it. Caveat from the audit: BOTH ablations
-    destroy ~1 nat of policy at this post-LayerNorm site, so "recovered" is ~0.99 for nearly any
+    destroy ~2 nats of policy at this post-LayerNorm site, so "recovered" is ~0.99 for nearly any
     SAE. Headline the raw KL / top-1 / |dQ| instead, and compare against:
   * noise reference — splice x + n, where n is isotropic Gaussian noise rescaled per token to the
     SAME norm as the SAE's error (recon − x). If the SAE's error hurts more than equal-norm noise,

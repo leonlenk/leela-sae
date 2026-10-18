@@ -81,6 +81,8 @@ def test_aux_loss_ignores_negative_dead_preactivations():
 
 
 def test_aux_loss_routes_gradient_into_dead_latents_only():
+    # Checks the gradient w.r.t. the pre-activations: only dead columns receive any. (Through `pre`,
+    # the encoder weights / b_enc / pre_bias still get updated — but only via the dead latents' rows.)
     torch.manual_seed(0)
     sae = TopKSAE(d_model=4, dict_size=4, k=2)
     pre = torch.rand(3, 4).add(0.1).requires_grad_(True)      # all positive so dead ones get picked

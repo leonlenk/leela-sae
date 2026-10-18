@@ -95,3 +95,15 @@ def test_probe_threshold_is_exact_even_for_rare_positives():
     labels[-3:] = True
     t = best_f1_threshold(scores, labels)
     assert ((scores > t) == labels).all()
+
+
+def test_fit_probe_recovers_a_linearly_separable_rare_property():
+    # 1% positives defined by a hidden linear rule: a working probe must score near-perfectly on a
+    # fresh test split (threshold chosen on the training split only).
+    from src.eval.probes import fit_probe
+    torch.manual_seed(0)
+    w = torch.randn(16)
+    X_S, X_T = torch.randn(20_000, 16), torch.randn(20_000, 16)
+    cut = torch.quantile(X_S @ w, 0.99)
+    out = fit_probe(X_S, X_S @ w > cut, X_T, X_T @ w > cut, steps=300, device="cpu")
+    assert out["test_auroc"] > 0.99 and out["test_f1"] > 0.85

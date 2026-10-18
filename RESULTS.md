@@ -16,32 +16,32 @@ Lichess games (never seen in SAE training or feature selection) unless stated ot
   explains 85% of the residual variance; spliced into the net, Leela still picks the same move in
   90% of positions (vs 7% if the layer is replaced by its mean). Its errors are ~2.5× more harmful
   than random noise of the same size — they fall in directions the net uses.
-- **Piece identity is everywhere and causally used.** Every layer has near-perfect
-  (F1 ≈ 0.99) "own knight here" / "enemy pawn here"-style features. That is expected — it is the
-  input, carried forward — but removing one does change play: e.g. ablating the own-knight feature
-  cuts the probability of knight moves by ~20% and changes the top move in 28% of positions.
-- **Computed concepts exist, but rarely as one clean feature.** Things the net must work out —
-  check, hanging pieces, pins, passed pawns — are linearly decodable from the residual stream
-  (probe F1 0.75–0.99) and absent from the raw input (probe F1 ≤ 0.13). The SAE has features for
-  some of them: a single feature tracks "my king is in check" with F1 0.95 at layer 3; "enemy piece
-  hanging" reaches 0.73 at layer 3. More often a concept is split across several features or only
-  partly captured: for hanging pieces, pins and passed pawns even the best 30 features together
-  reach F1 0.55–0.72, against 0.80–0.90 for a probe.
-- **Those concept features are causal, weakly.** Removing a check, hanging-piece or passed-pawn
-  feature moves the policy more than removing an activation-matched control on 77–94% of
-  positions, but by tiny amounts (KL ~10⁻⁴ nats, 100–1000× less than a piece feature) — later
-  layers can presumably recompute the fact from the intact board. Writing
-  them in works better: adding the "in check" feature to a king that isn't in check raises the
-  probability of king moves by 47%; adding the "hanging" feature to a defended enemy piece raises
-  capture probability by 6%. Two of four steering hypotheses held; two did not.
-- **History is not a big confound here.** Feeding real game history instead of the repeated
-  current board barely changes the policy (median KL 0.005 nats) and 78–87% of features are
-  stable (activation correlation ≥ 0.9), including every feature named above. The filter does have
-  teeth: an SAE trained *with* real history learns a "the last move landed here" feature (F1 0.78),
-  and the filter rejects it (correlation 0.13).
+- **Piece identity is everywhere and causally used.** Every layer has "own knight here" / "enemy
+  pawn here"-style features (held-out F1 ≈ 0.99 at layers 3 and 7, ≥ 0.88 at layer 11). Expected —
+  it is the input, carried forward — but removing one does change play: ablating the own-knight
+  feature cuts the probability of knight moves by ~20% and changes the top move in 28% of positions.
+- **Computed concepts are in the dictionary, but spread out.** Check, hanging pieces, pins and passed
+  pawns cannot be read off a square's own input planes (probe F1 ≤ 0.13) but are linearly decodable
+  from the residual stream (0.80–0.99) — and from the SAE's *reconstruction* almost as well (e.g. pins
+  0.81 vs 0.81, hanging 0.85 vs 0.90), while the SAE's error carries almost none of it (≤ 0.09). Some
+  have a clean single feature ("my king is in check": F1 0.95 at layer 3); most are split over many:
+  for hanging pieces, pins and passed pawns even the best 30 features fed to a probe reach only
+  0.55–0.72.
+- **Removing one such feature barely matters; removing the group does.** A single derived-concept
+  feature changes the policy by ~10⁻⁴ nats. But removing the 30 non-piece features most associated
+  with "enemy piece hanging" makes Leela ~20% less likely to capture the hanging piece (activation-
+  matched control: no change). Writing features in works too, at 3× their typical activation:
+  "in check" on a king that isn't in check → +47% king moves; "hanging" on a defended enemy piece →
+  +6% captures (+3.8% / +1.4% at 1×). Two of four steering hypotheses held.
+- **History is not a big confound here.** Feeding real game history instead of the repeated current
+  board barely changes the policy for most positions (median KL 0.005 nats; mean 0.019), and 78–87%
+  of measurable features stay put, including every concept feature above. The filter has teeth: an SAE
+  trained *with* real history learns a "the last move landed here" feature (F1 0.78), which the
+  filter rejects (correlation 0.13).
 - **The original training data was the wrong data.** The 30k-FEN Hugging Face corpus looks like
-  random play (no endgames, 41% of positions down ≥ 3 pawns). At equal budget, an SAE trained on it
-  reconstructs real games far worse (FVU 0.29 vs 0.20) than one trained on Lichess positions.
+  random play (no endgames; 41% of positions have a ≥ 3-pawn material imbalance). At equal budget,
+  an SAE trained on it reconstructs real games far worse (FVU 0.29 vs 0.20) than one trained on
+  Lichess positions.
 
 ## Setup
 
@@ -53,13 +53,13 @@ Lichess games (never seen in SAE training or feature selection) unless stated ot
 | Data | 316k positions from June 2024 Lichess games, both players ≥ 2000, ≥ 3+0, no bots; 2 random plies per game; split by game (90/5/5); de-duplicated by position, no held-out position also in train |
 | SAE | Top-K, k = 32, 6144 features (8×), tied init, unit-norm decoder, AuxK dead-latent revival (Gao et al. 2024) |
 | Training | 200k boards × 64 tokens = 12.8M tokens, 2 epochs, Adam (lr 3.3e-4, warmup, linear decay), ~6 min on a laptop RTX 5050 |
-| Eval splits | feature selection / probe fitting on 4000 validation boards; every reported number on 4000 test boards (1000 for fidelity) |
+| Eval samples | validation split (V) for selection/fitting, test split (T) for every reported number. SAE feature selection: 4000 V / 4000 T boards; linear probes and the feature-splitting table: 1500 V / 1500 T; fidelity: 1000 T; ablations: 64 boards per feature; joint ablation: 128 per property; steering: 300 trials per hypothesis; history: 1500 T (3000 for the positive control); data comparison: 500 per source |
 
 ## 1. Audit: what the first version got wrong
 
 Three independent agent auditors (hook/data, SAE/training, evaluation) reviewed the code and
-re-ran its claims on the GPU; the fixes were then re-audited. In rough order of how much they
-mattered:
+re-ran its claims on the GPU; the fixed version and this write-up were then audited again. In rough
+order of how much they mattered:
 
 | Problem | Effect on the original results | Fix |
 |---|---|---|
@@ -67,13 +67,14 @@ mattered:
 | Castling scored at the wrong slot (lczerolens uses e1g1; lc0 encodes king-takes-rook, e1h1) | `predict_move` effectively never castled; castling mass missing from every KL | Remap castling in `hook.policy_index` |
 | `decode_move` drops the promotion piece | Promotions returned as illegal moves; 2 of 9 "missed" mate-in-ones were correct | Score legal moves, return the move itself |
 | En passant is invisible under the history-free encoding (no ep input plane; lc0 infers ep from history) | Reported en passant feature with F1 = **1.000** was impossible — 1 positive in 300 boards | Property marked hidden; only meaningful with real history |
-| Board-level F1 = argmax over 6144 features, scored on the same 300 boards | Selection artifacts: shuffled labels reach the reported values; on held-out boards ep 1.00 → 0.00, "castled" 0.40 → 0.00, check 0.36 → 0.06 | Select on one split, report on another, with permutation null and always-true baseline |
+| Board-level F1 = argmax over 6144 features, scored on the same 300 boards | Selection artifacts: shuffled labels reach the reported values; re-scored on disjoint boards (first audit, original SAE and eval set) en passant 1.00 → 0.00, "castled" 0.40 → 0.00, check 0.36 → 0.06 | Select on one split, report on another, with permutation null and always-true baseline |
 | Causal "random control" was not active on the board (87.6% of the time), and each test used one board | The "control KL = 0" was true by construction | Error-preserving ablation, 64 boards where the feature is active, activation-matched control features on the same board, calibrated against random features |
 | `loss_recovered` vs zero-ablation | Zeroing (or mean-ablating) this layer destroys ~2 nats of policy, so nearly any SAE scores ≈ 0.99 | Headline raw legal KL, top-1 agreement, ΔQ, and an equal-norm noise reference |
 | Training data (30k HF FENs) | Off-distribution, small (1.15M tokens), no move history — see §8 | Lichess corpus, 11× more tokens |
-| Random encoder init; dead-latent window of 100k tokens; AuxK picked negative pre-activations | 2.6–5% dead latents, 20% nearly dead; the window flagged 18.5% of latents as dead, 86% of which were alive | Tied init (0.05% dead), 2M-token window, ReLU'd AuxK |
+| Random encoder init; dead-latent window of 100k tokens; AuxK picked negative pre-activations | 2.6–5% dead latents, 20% nearly dead; the window flagged 18.5% of latents as dead, 86% of which were alive | Tied init, 2M-token window, ReLU'd AuxK |
 | Tests that could not fail | e.g. the causal test passed for 4 of 4 deliberately broken harnesses; the F1 test could not tell F1 from precision | Tests with hand-computed asymmetric cases and "power" checks that must fail when nothing is patched |
 | Found while redoing the eval: the linear-probe threshold was searched on a coarse quantile grid | Probes looked bad on rare properties (in-check: AUROC 1.0 but F1 0.30), which would have made one SAE feature look better than a probe | Exact threshold search |
+| Found by the second audit, in the first draft of this write-up | Claimed the part of each concept missing from single features "lives in the SAE's reconstruction error" — the opposite is true (§4); a pawn-identity feature was listed as a derived concept; several overstatements | Corrected below |
 
 What was right from the start: the activation site, the token ↔ square mapping (including the
 vertical flip for Black to move), batched capture, the WDL head (probabilities, side-to-move view),
@@ -89,7 +90,7 @@ answers. The policy head alone (no search) on 1000 random Lichess puzzles:
 | top-1 = solution | 99.1% | 99.1% | 90.3% | 85.9% | 75.6% | **93.8%** |
 
 It finds mate in all 134 mate-in-one puzzles, castles and promotes correctly. With the history
-planes zeroed instead (off-distribution), the top move changes in 94% of positions.
+planes zeroed instead (off-distribution), the top move changes in 94 of 100 positions.
 
 ## 3. Reconstruction fidelity
 
@@ -103,43 +104,50 @@ in isotropic Gaussian noise with the same per-token norm as the SAE's error.
 | layer 11 | 0.173 | 0.027 | 89.4% | 0.029 | 0.0108 | 2.5× |
 | layer 7, original SAE (HF data, old code) | 0.309 | 0.065 | 83.7% | 0.056 | 0.0156 | 4.2× |
 
-For reference, replacing layer 7 by its per-square mean gives KL 2.2 nats and 7% top-1 agreement,
-so "loss recovered" is 0.99 for every row — not a useful number at this site. Deeper layers are
-harder to reconstruct. A higher learning rate (1e-3) is marginally better at layer 7 (FVU 0.147).
+FVU is relative to the global mean activation; relative to each square's own mean, layer 7's is
+0.176. Replacing layer 7 by its per-square mean gives KL 2.2 nats and 7% top-1 agreement, so
+"loss recovered" is 0.99 for every row — not a useful number at this site. Deeper layers are harder
+to reconstruct. A higher learning rate (1e-3) is marginally better at layer 7 (FVU 0.147).
+Latents dead at the end of training (no activation in 2M tokens): 0.6% / 0.05% / 0.02% at layers
+3 / 7 / 11.
 
 ## 4. Do features match chess properties?
 
 For each property we take the single feature with the best F1 on validation boards and report its
-F1 on test boards, next to two linear probes fit on the same validation boards: one on the layer's
-full residual stream (is the information linearly there?) and one on each square's 112 raw input
-planes (was it already in the input?).
+F1 on test boards, next to two linear probes fit on validation boards: one on the layer's full
+residual stream (is the information linearly there?) and one on the square's own 112 input planes
+(is it readable from that square's input alone?). Caveats: a feature "fires" when its activation is
+above zero, while probes get a tuned threshold (the AUROC columns in the generated tables are
+threshold-free); SAE scores use 4000 test boards, probes 1500.
 
 ![correlational](docs/figures/correlational_L7.png)
 
 - **Input properties** (piece identity, castling rights) have near-perfect single features.
   Expected, and a good sanity check — but not a discovery.
-- **Derived properties** are computed: input probes fail (hanging 0.06, pinned 0.03, in-check 0.13)
-  while residual probes succeed (0.75–0.99). Single SAE features recover a fraction of that. At
-  layer 7: in-check 0.75, enemy passed pawn 0.61, enemy hanging 0.51, pins ≤ 0.30.
+- **Derived properties** are computed: square-local input probes fail (hanging 0.06, pinned 0.03,
+  in-check 0.13; a square's own planes can't show its attackers) while residual probes succeed
+  (0.75–0.99). Single SAE features recover a fraction of that. At layer 7: in-check 0.75, enemy
+  passed pawn 0.61, enemy hanging 0.51, pins ≤ 0.30.
 - **Dense relational maps** (squares attacked, legal destinations, king zones) are almost perfectly
-  linearly decodable (0.95–0.99) but no single feature tracks them (≤ 0.42).
+  decodable (0.95–0.99) but no single feature tracks them (≤ 0.42, below the trivial "always fires"
+  score for the densest ones).
 
-**Split or missing?** Probing on only the n best SAE features for a property separates the two
-(layer 7, test F1):
+**Split, or missing?** Layer 7, test F1 of probes fit on: the n best features' activations; the
+SAE's reconstruction x̂; the SAE's error x − x̂; the full residual x.
 
-| property | 1 feature | 3 | 10 | 30 | full residual probe |
-|---|---|---|---|---|---|
-| own king in check | 0.74 | 0.95 | 0.96 | 0.96 | 0.99 |
-| enemy en prise | 0.52 | 0.71 | 0.75 | 0.78 | 0.89 |
-| enemy hanging | 0.56 | 0.69 | 0.70 | 0.72 | 0.90 |
-| own pinned | 0.23 | 0.44 | 0.54 | 0.63 | 0.81 |
-| enemy passed pawn | 0.65 | 0.62 | 0.60 | 0.64 | 0.85 |
-| squares attacked by enemy | 0.68 | 0.68 | 0.75 | 0.82 | 0.99 |
-| legal destinations | 0.51 | 0.51 | 0.69 | 0.80 | 0.95 |
+| property | always fires | 1 feature | 3 | 10 | 30 | x̂ (reconstruction) | x − x̂ (error) | x |
+|---|---|---|---|---|---|---|---|---|
+| own king in check | 0.00 | 0.74 | 0.95 | 0.96 | 0.96 | 0.96 | 0.03 | 0.99 |
+| enemy hanging | 0.01 | 0.56 | 0.69 | 0.70 | 0.72 | 0.85 | 0.03 | 0.90 |
+| own pinned | 0.00 | 0.23 | 0.44 | 0.54 | 0.63 | 0.81 | 0.09 | 0.81 |
+| enemy passed pawn | 0.01 | 0.65 | 0.62 | 0.60 | 0.64 | 0.75 | 0.04 | 0.85 |
+| squares attacked by enemy | 0.68 | 0.68 | 0.68 | 0.75 | 0.82 | 0.98 | 0.69 | 0.99 |
 
-"In check" is in the dictionary, split over ~3 features at layer 7 (at layers 3 and 11 a single
-feature does it). Hanging pieces, pins and passed pawns plateau well below the probe: part of each
-concept is not in any feature we can find — most likely it lives in the SAE's reconstruction error.
+The concepts are in the dictionary — a linear readout of the reconstruction recovers most of what
+the full residual stream has, and the error alone recovers nothing beyond the trivial baseline —
+but spread across many features. "In check" needs ~3 at layer 7 (at layers 3 and 11 a single
+feature does it); hanging pieces, pins and passed pawns need more than 30. For "squares attacked",
+1–3 features score exactly the always-fires baseline: the probe gave up.
 
 **What the matched features look like** (top activations on test boards, from the side to move's
 view; highlighted square = where the feature fires):
@@ -151,23 +159,43 @@ view; highlighted square = where the feature fires):
 
 ## 5. Do they matter to the policy?
 
-**Ablation (necessity).** Remove one feature's contribution from the true activation (keeping the
+**Single-feature ablation.** Remove one feature's contribution from the true activation (keeping the
 SAE's error and every other feature), on 64 test boards where it is active, and compare with a
 control feature active on the same board with matched activation mass.
 
 ![causal](docs/figures/causal_L7.png)
 
-- Piece-identity features matter: median KL 10⁻⁴–10⁻¹ nats (kings and queens lowest, knights and
-  pawns highest). Ablating the own-knight feature drops the probability of moves touching its
-  squares by 20% (Δlog p = −0.22; control +0.003) and changes the top move on 28% of boards
-  (control 3%).
+- Piece-identity features matter: median KL 10⁻⁴–10⁻¹ nats (pawns and knights highest, kings and the
+  enemy queen and rook lowest). Ablating the own-knight feature drops the probability of moves
+  touching its squares by 20% (Δlog p = −0.22; control +0.003) and changes the top move on 28% of
+  boards (control 3%).
 - Features for check, hanging / en-prise pieces and passed pawns beat their matched controls on
-  77–94% of boards (the 90th percentile for random features is 84%); weakly matched features
-  (pins, attack maps, material) do not. But the absolute effect is ~10⁻⁵–10⁻⁴ nats: above a
-  typical random feature (~2·10⁻⁶) yet 100–1000× below the piece features. Removing "in check"
-  from a king in check changes almost nothing. A plausible reading: blocks 8–14 can recompute these
-  facts from the board, which ablating one feature leaves intact, so ablation at a middle layer
-  mostly tests redundancy.
+  77–94% of boards — but random features beat theirs on 48% (median) and up to 84% (90th
+  percentile), so only some clear that bar. Their absolute effect is ~10⁻⁵–10⁻⁴ nats: above a typical
+  random feature (~2·10⁻⁶), well below most piece features. Removing "in check" from a king in check
+  changes almost nothing.
+
+**Joint ablation.** Two readings fit that: the concept is spread over redundant features (removing
+one leaves the rest), or later blocks recompute it from the intact board. Removing the top-n
+features for a property *together* separates them. Layer 7, 128 test boards where the property
+holds; piece-identity-like features (F1 > 0.3 against any piece type or "empty") excluded; control
+= one activation-matched feature per removed feature, on the same board. Change in log P(moves
+touching the property's squares), median, candidate vs control:
+
+| property (moves measured) | top 1 | top 3 | top 10 | top 30 | KL, top 30 (control) |
+|---|---|---|---|---|---|
+| enemy hanging (captures of the hanging piece) | 0.00 / 0.00 | −0.005 / 0.00 | −0.07 / 0.00 | **−0.22 / 0.00** | 0.012 (0.0001) |
+| own king in check (king moves) | 0.00 / 0.00 | −0.04 / 0.00 | −0.05 / 0.00 | −0.03 / 0.00 | 0.0023 (0.0001) |
+| own pinned (moves of the pinned piece) | 0.00 / 0.00 | 0.00 / 0.00 | +0.02 / 0.00 | +0.03 / 0.00 | 0.0018 (0.0006) |
+| enemy passed pawn (moves touching the pawn) | 0.00 / 0.00 | 0.00 / 0.00 | 0.00 / 0.00 | −0.01 / 0.00 | 0.0007 (0.0002) |
+
+Removing the 30 "hanging" features makes Leela about 20% less likely to capture a hanging piece,
+with no effect from the matched control: the concept is used, and spread out. "In check" behaves
+partly like that (a ~4% drop in king moves once three features are removed, KL 30–150× the
+control's) —
+in check the legal moves are mostly evasions anyway, so there is less policy to move. For pins and
+passed pawns the effects stay small; whether later layers recompute them or the policy simply
+doesn't lean on them at this layer, this experiment can't say.
 
 **Steering (sufficiency).** Write a feature, at its typical (90th-percentile) activation or 3× that,
 onto a square where its property is false, and test a specific prediction. 300 test boards each;
@@ -181,23 +209,29 @@ norm, written on the same square.
 | own hanging (5424) | attacked-but-defended own piece | move it away | +0.1% / +0.5% | 55% | 61% / 57% |
 | own passed pawn (1581) | own pawn that isn't passed | push it | −0.3% / −1.2% | 32% | 45% / 35% |
 
-Two clear successes, one null and one failure. The failures line up with the correlational
-evidence: feature 5424 only matches "own hanging" with F1 0.32 (auto-interp calls it a *defended*
-pawn), and "passed pawn" may encode "advanced pawn near promotion" — which a blocked pawn is not.
+Two clear successes, one null and one failure. (The in-check feature activates more strongly than
+almost any other, so its feature-control pool has only 2 candidates; the random-direction control
+does not have that problem.) The failures line up with the correlational evidence: feature 5424
+only matches "own hanging" with F1 0.32 (auto-interp calls it a *defended* pawn), and "passed pawn"
+may encode "advanced pawn near promotion" — which a blocked pawn is not.
 
-**Scorecard against DESIGN.md's three checks** (correlational: held-out F1 ≥ 0.5 and ≥ 0.1 above the
-permutation null; causal: ablation beats matched controls more often than 90% of random features
-do; history: §6). Derived-concept features that pass all three:
+**Scorecard against DESIGN.md's three checks.** Correlational: held-out F1 ≥ 0.5 and ≥ 0.1 above
+the permutation null (which, for rare properties, is ~0.01 and never binds). Causal: single-feature
+ablation beats matched controls more often than the 90th percentile of random features, on either
+the KL test or the targeted-move test — a lenient bar that 14–18% of random features also clear.
+History: §6. Derived-concept features (excluding ones that are also a piece-identity feature) passing
+all three:
 
 | layer | features passing all three checks |
 |---|---|
 | 3 | in check (F1 0.95), enemy hanging / en prise (0.73), material ahead (0.71), own passed pawn (0.57) |
-| 7 | enemy passed pawn (0.61), enemy hanging (0.51) |
-| 11 | in check (0.84), own en prise (0.54), own piece has a legal move (0.54) |
+| 7 | enemy passed pawn (0.61), enemy hanging (0.51) — both marginal on the causal bar |
+| 11 | in check (0.84), own en prise (0.54) |
 
-11 of 12 piece-identity features pass at layer 7 (own pawn misses the calibrated causal bar despite
-an 8× larger effect than its control: its matched controls are other strong features). Full
-per-property tables are generated by `scripts/10_figures.py`.
+11 of 12 piece-identity features pass at layer 7 (own pawn misses the causal bar despite an 8×
+larger effect than its control: its matched controls are other strong features). Given how lenient
+the causal bar is, the joint-ablation and steering results above are the stronger causal evidence.
+Full per-property tables are generated by `scripts/10_figures.py`.
 
 ## 6. Does history change the picture?
 
@@ -207,15 +241,18 @@ move history and compared every feature's activation on every square.
 
 | | layer 3 | layer 7 | layer 11 |
 |---|---|---|---|
-| policy KL, real vs repeated history (median) | 0.005 | 0.005 | 0.005 |
+| policy KL, real vs repeated history (median / mean) | 0.005 / 0.019 | 0.005 / 0.019 | 0.005 / 0.019 |
 | SAE FVU: repeated → real history | 0.112 → 0.131 | 0.152 → 0.160 | 0.175 → 0.182 |
-| features with activation correlation ≥ 0.9 | 81% | 87% | 78% |
+| measurable features (≥ 20 activations) | 3690 | 4913 | 5295 |
+| … with activation correlation ≥ 0.9 | 81% | 87% | 78% |
 
-Every feature named in this document survives (correlation ≥ 0.94). The original SAE was far less
-stable: only 33% of its features survive.
+History matters little for most positions, but its mean effect on the policy is as large as
+splicing in the layer-7 SAE, so a minority of positions shift substantially. Every feature
+discussed in §4–5 survives (correlation ≥ 0.94). The original SAE was far less stable: only 33% of
+its measurable features survive.
 
-**Does the filter have power?** A history-free SAE cannot contain history features, so it can't show
-that. Positive control, at layer 7 on 3000 test positions with ≥ 8 plies of history:
+**Does the filter have power?** A history-free SAE cannot contain history features, so it can't
+show that. Positive control, at layer 7 on 3000 test positions with ≥ 8 plies of history:
 
 - The residual stream does carry move history when it gets it: a linear probe for "the square the
   last move landed on" reaches F1 0.94 with real history, 0.44 without (the board alone gives
@@ -236,11 +273,12 @@ real-history SAE, 3 in the history-free one).
 
 ![layers](docs/figures/layers.png)
 
-Single-feature matches for derived concepts are generally best at layer 3 (in-check 0.95, enemy
-hanging 0.73, own pinned 0.50, enemy king zone 0.56) and weakest at layer 7, where in-check is
-split across several features; layer 11 recovers some (in-check 0.84). Reconstruction gets harder
-with depth (FVU 0.11 → 0.15 → 0.17) and the layer-3 dictionary has more very rare features (16% never
-fire on 256k test tokens, vs 3% at layer 7 and 1% at layer 11).
+Single-feature matches for derived concepts are best at layer 3 (mean F1 over derived properties
+0.58; in-check 0.95, enemy hanging 0.73, own pinned 0.50, enemy king zone 0.56). Layers 7 and 11
+are similar (0.49 and 0.50) — except "in check", which is split across several features at layer 7
+(0.75) and whole again at layer 11 (0.84). Reconstruction gets harder with depth (FVU 0.11 → 0.15 →
+0.17), and the layer-3 dictionary has more very rare features (16% never fire on 256k test tokens,
+vs 3% at layer 7 and 1% at layer 11).
 
 ## 8. Did the original data help?
 
@@ -253,8 +291,8 @@ on 500 held-out boards from each source:
 | Lichess games | **0.199 / 87.8%** | 0.219 / 89.2% |
 
 The HF-trained SAE barely transfers to real games; the Lichess-trained one transfers to the HF
-positions reasonably. Scaling the Lichess data 11× (to the main run) improves layer-7 FVU further,
-0.199 → 0.151. The HF corpus was dropped.
+positions reasonably. The main run (11× the data and 5.6× the optimizer steps) reaches FVU 0.151 on
+1000 Lichess test boards. The HF corpus was dropped.
 
 ## 9. Auto-interp
 
@@ -262,26 +300,31 @@ Claude (Sonnet, through the CLI) labeled 61 layer-7 features from their top acti
 a fresh call with only the label — predicted which of 10 held-out boards (half where the feature
 fires) it fires on, and where.
 
-| features | balanced accuracy | firing square guessed |
-|---|---|---|
-| matched to a property (31) | 0.70 | 56% |
-| random live features (30) | 0.60 | 23% |
+| features | n | balanced accuracy | firing square guessed |
+|---|---|---|---|
+| piece-identity features | 12 | 0.84 | 78% |
+| other property-matched features | 19 | 0.61 | 41% |
+| random live features | 30 | 0.60 | 23% |
 
 Labels are fluent and usually plausible ("own fianchettoed bishop on g7 shielding the castled
-king", "empty squares an enemy knight attacks"), but for typical features only modestly
-predictive. For the property-matched features they mostly agree with the property and add detail —
-e.g. the own-rook feature fires most on passive back-rank rooks — and where they disagree the
-correlational match was weak too. With 10 boards per feature, individual scores are noisy; only
-the averages should be read.
+king", "empty squares an enemy knight attacks"), but outside piece identity they predict held-out
+firing only modestly — no better for the property-matched features than for random ones. Where the
+labels describe property features they mostly agree with the property and add detail (the own-rook
+feature fires most on passive back-rank rooks; the "own hanging" match is called a *defended* pawn,
+consistent with its low F1). With 10 boards per feature, individual scores are noisy, and the
+square-guess rate has no simple chance baseline (features that fire on many squares are easier);
+only the averages should be read.
 
 ## 10. DESIGN.md checklist
 
 - [x] Hook reproduces Leela's move — proxy: 93.8% of 1000 puzzles, all 134 mate-in-ones (no lc0
   reference binary was available)
-- [x] Top-K SAE trains; L0 = k; dead latents 0.05% during training
+- [x] Top-K SAE trains; L0 = k; dead latents at the end of training 0.6% / 0.05% / 0.02% (layers 3/7/11)
 - [x] Loss recovered measured — and replaced as a headline by legal KL / top-1 / noise reference
 - [x] ≥ 1 feature with high F1 against a board property and a causal head effect — piece identity
-  (strongly), and derived concepts such as "in check" (F1 0.95 at layer 3; steering +47% king moves)
+  (strongly); "in check" (layer 3 feature 1304: F1 0.95, passes all three checks; layer 7 feature
+  277: F1 0.75, steering +47% king moves at 3×); "enemy hanging" as a group of features (removing
+  30 cuts captures of hanging pieces by ~20%)
 - [ ] Ray pipeline + Accelerate scaling — dropped: unnecessary on one GPU
 - [x] Auto-interp labels for top features
 
@@ -291,12 +334,16 @@ the averages should be read.
 - The properties are hand-picked; features that track concepts we didn't think to label are
   invisible to the correlational eval (auto-interp suggests many fire on empty squares in
   structured ways — escape squares, knight destinations).
-- Ablation and steering are single-feature, single-layer interventions; effects on the value head
-  and on search were not studied.
+- Single-feature F1 uses a fixed "fires or not" threshold while probes use a tuned one, which
+  slightly favours the probes (e.g. layer 11's in-check feature: F1 0.84 at > 0, 0.96 tuned).
+- The single-feature causal bar is lenient (14–18% of random features clear it) and based on 64
+  boards per feature; the joint-ablation and steering results rest on one layer and a handful of
+  hypotheses.
+- Effects on the value head and on search were not studied.
 - Positions come from human games ≥ 2000 Lichess rating, not Leela's own self-play distribution.
 - The move-reproduction gate is a proxy; a check against the lc0 engine itself is still missing.
 
 ## Reproduce
 
-See [README.md](README.md) — `scripts/00` … `scripts/11` regenerate every number and figure here
-(≈ 3 hours on an 8 GB laptop GPU, plus ~2 GB of downloads and ~80 GB of activation caches).
+See [README.md](README.md) — `scripts/00` … `scripts/12` regenerate every number and figure here
+(≈ 4 hours on an 8 GB laptop GPU, plus ~2 GB of downloads and ~80 GB of activation caches).

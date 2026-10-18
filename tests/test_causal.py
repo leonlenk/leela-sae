@@ -75,3 +75,17 @@ def test_steering_adds_exactly_alpha_times_direction_at_one_token():
     delta[0, 10] = 0
     delta[1, 0] = 0
     assert delta.abs().max() == 0                         # nothing else touched
+
+
+def test_joint_ablation_of_one_feature_matches_single_ablation():
+    torch.manual_seed(0)
+    sae = TopKSAE(d_model=8, dict_size=32, k=4)
+    act = torch.randn(2, 64, 8)
+    f = torch.tensor([3, 11])
+    mask = torch.zeros(2, 32, dtype=torch.bool)
+    mask[0, 3] = mask[1, 11] = True
+    assert torch.allclose(causal._ablation_fn_sets(sae, mask)(act), causal._ablation_fn(sae, f)(act), atol=1e-6)
+    # Removing EVERY feature leaves exactly pre_bias + the SAE's error: act - (recon - pre_bias).
+    full = torch.ones(2, 32, dtype=torch.bool)
+    recon = sae(act.reshape(-1, 8))[0].reshape(2, 64, 8)
+    assert torch.allclose(causal._ablation_fn_sets(sae, full)(act), act - recon + sae.pre_bias, atol=1e-5)
