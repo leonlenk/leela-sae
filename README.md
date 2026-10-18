@@ -9,6 +9,37 @@ survive being fed real move history.
 **Results and conclusions: [RESULTS.md](RESULTS.md).** Original plan and design rationale:
 [DESIGN.md](DESIGN.md).
 
+## Why this project
+
+Leon wanted to learn how sparse autoencoders work, and to see whether a published result
+generalizes. [Karvonen et al. (2024)](https://adamkarvonen.github.io/machine_learning/2024/06/12/sae-board-game-eval.html)
+trained SAEs on a small language model that learned chess by predicting the next character of
+Lichess game transcripts, and scored them against the known board. Would the same approach work on
+a real chess engine? Leela Chess Zero is among the strongest engines in the world, was trained from
+scratch by self-play rather than on text, and is a transformer — a different model in a different
+training regime.
+
+The guiding principle was learning over speed. SAEs and their evaluations fail quietly: a wrong
+activation site or a leaky metric produces a plausible result, not a crash. So Leon wrote the parts
+that carry the ideas — the model hook, the SAE, the training loop, the evaluations — by hand, with
+Claude Code limited to boilerplate and to writing each function's tests before he implemented it
+(the contract below). After a few dozen hours the SAE trained, and the first results looked
+promising: a feature for "own queen on this square" with F1 0.94; ablating it moved the policy
+(KL 0.003) and the win-draw-loss estimate (−0.01); and, surprisingly, the enemy-pawn feature mattered
+most (KL 0.01, WDL 0.06).
+
+His own write-up at that point listed what he wasn't sure about: zero-ablation might push the
+model off-distribution; at ~1200 Elo he couldn't judge whether the Hugging Face dataset was a good
+sample of chess; and he wanted to check pins and forks, follow Karvonen et al. in testing whether
+the whole board can be reconstructed, and compare earlier and later layers. Those questions set the
+agenda for finishing the project. The answers are in [RESULTS.md](RESULTS.md): the ablations were
+redone to keep the SAE's error and compared against matched controls (§5); the dataset was indeed
+off-distribution and was replaced (§8); pins are in §4–5 (forks were not attempted); board
+reconstruction is §10; layers 3, 7 and 11 are compared in §7. The instinct that piece identity —
+the enemy-pawn feature especially — matters to the policy held up: in the retrained SAE, removing
+the enemy-pawn feature changes Leela's top move in 28% of positions where it fires (6% for an
+activation-matched control feature).
+
 ## Who did what
 
 This started as a learning project with an explicit split between human-written and AI-written
