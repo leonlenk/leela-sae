@@ -38,6 +38,7 @@ Everything below ran on one 8 GB laptop GPU (RTX 5050); times are for that machi
 | 10 | `scripts/10_figures.py [--galleries]` | Figures in `docs/figures/` and per-property verdict tables | 1 min |
 | 11 | `scripts/11_feature_splitting.py --sae outputs/sae/L7.pt` | How much of each concept the top-n features recover vs a probe | 3 min |
 | 12 | `scripts/12_joint_ablation.py --sae outputs/sae/L7.pt` | Remove a concept's top-n features together; does the policy change? | 10 min |
+| 13 | `scripts/13_board_reconstruction.py outputs/sae/*.pt` | Karvonen et al. (2024) coverage + board reconstruction, with probe baseline; untrained-net controls come from `02`/`03` with `--random-weights 0 --random-init {permute,fresh}` | 5 min / SAE |
 
 Artifacts (positions, activation caches, SAEs, JSON results) go to `outputs/` (git-ignored).
 `notebooks/explore_features.ipynb` is for eyeballing individual features.

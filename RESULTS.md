@@ -38,6 +38,13 @@ Lichess games (never seen in SAE training or feature selection) unless stated ot
   of measurable features stay put, including every concept feature above. The filter has teeth: an SAE
   trained *with* real history learns a "the last move landed here" feature (F1 0.78), which the
   filter rejects (correlation 0.13).
+- **The board can be fully reconstructed from SAE features — but in Leela that proves little.**
+  With the board-reconstruction metric of [Karvonen et al. 2024](https://arxiv.org/abs/2408.00113),
+  the paper this project's eval was modelled on, layer-7 features rebuild the board with F1 0.98 and
+  get every square right in 61% of positions (linear probe: 0.99 / 89%) — far above that paper's
+  chess-language-model SAEs (0.85). But Leela is *given* the board: an SAE on an untrained copy of
+  the net does nearly as well (0.98 / 47%). Training shows on computed properties instead: the
+  trained net's SAE has a check detector (coverage 0.94); the untrained one does not (0.19).
 - **The original training data was the wrong data.** The 30k-FEN Hugging Face corpus looks like
   random play (no endgames; 41% of positions have a ≥ 3-pawn material imbalance). At equal budget,
   an SAE trained on it reconstructs real games far worse (FVU 0.29 vs 0.20) than one trained on
@@ -315,7 +322,65 @@ consistent with its low F1). With 10 boards per feature, individual scores are n
 square-guess rate has no simple chance baseline (features that fire on many squares are easier);
 only the averages should be read.
 
-## 10. DESIGN.md checklist
+## 10. Can the board be fully reconstructed? (Karvonen et al. 2024)
+
+The correlational eval in DESIGN.md was modelled on [Karvonen et al. 2024, "Measuring Progress in
+Dictionary Learning for Language Model Interpretability with Board Game Models"](https://arxiv.org/abs/2408.00113),
+which scores SAEs on chess and Othello models against the known board with two metrics
+(`src/eval/board_reconstruction.py`, `scripts/13_board_reconstruction.py`):
+
+- **Coverage**: for each "piece p on square s" property (768 of them), the best F1 any single
+  feature achieves when it counts as firing above t × its maximum activation, t ∈ {0, 0.1, …, 0.9};
+  averaged over properties.
+- **Board reconstruction**: assign each feature to every (square, piece) it predicts with ≥ 95%
+  precision on training positions; on test positions, predict the board from whichever assigned
+  features fire; score with F1 over pieces, averaged over positions. We add the **exact-board rate**:
+  the fraction of positions where every square comes out right — the board *fully* reconstructed.
+
+Adapted to Leela: one token per square, so (s, p) is read at token s; pieces in the net's own/enemy
+frame (equivalent, given the side to move); assignment and t chosen on all 15.5k validation boards,
+scored on 2000 test boards. Baselines as in the paper — a linear probe, and SAEs trained the same
+way on random-weights copies of the net. Two copies, because here the choice matters: permuting the
+trained weights (keeping their scale) collapses all 64 tokens into one vector by layer 7, while a
+conventional small-weight init passes the input board through nearly unchanged.
+
+| | coverage | board F1 | boards fully reconstructed | strategy coverage |
+|---|---|---|---|---|
+| SAE, layer 3 | 0.999 | 0.986 | 67% | 0.81 |
+| SAE, layer 7 | 0.994 | 0.983 | 61% | 0.78 |
+| SAE, layer 11 | 0.977 | 0.966 | 34% | 0.79 |
+| original SAE (layer 7) | 0.984 | 0.953 | 33% | 0.75 |
+| SAE on an untrained net, fresh init (layer 7) | 0.995 | 0.978 | 47% | 0.71 |
+| SAE on an untrained net, permuted weights (layer 7) | 0.31 | 0.09 | 0% | 0.52 |
+| linear probe, layer 7 (trained net / fresh init) | — | 0.993 / 0.979 | 89% / 71% | — |
+| *Karvonen et al., chess LM: best SAE / linear probe / random-net SAE* | *0.48 / 0.98 / 0.11* | *0.85 / 0.98 / 0.01* | — | — |
+
+- **The board can be reconstructed almost perfectly** — far better than the paper's SAEs on a chess
+  language model. Errors are rare: at layer 7, 0.56 wrong squares per board on average and 88% of
+  boards within one square; about three in four errors are a spurious or wrong-type piece, one in
+  four a missed piece. Own pieces
+  are almost never missed (≤ 0.75%), enemy knights and bishops ~2% of the time.
+- **But here that is not evidence of learning.** The paper's models read move text, so the board is
+  something they must infer. Leela is *given* the board, and an SAE on an untrained, freshly
+  initialized copy of the net reconstructs it nearly as well (F1 0.978, coverage 0.995). Training
+  buys keeping it intact through depth (the permuted-weight net loses it entirely) and somewhat
+  cleaner features (61% vs 47% of boards exactly right).
+- **The meaningful version of the test is the paper's "strategy" set** — properties that must be
+  computed. There the trained net's SAE has features the untrained one lacks: check 0.94 vs 0.19,
+  queen on the board 0.98 vs 0.87, threatened own pieces 0.58 vs 0.45, pins 0.40 vs 0.33. It is no
+  better for properties readable from the input planes (castling rights: the untrained net scores
+  1.00) or for legal-move squares (0.50 vs 0.56). These coverages are in the same range as the
+  paper's chess-LM SAEs (check 1.00, pin 0.33, legal moves 0.63, castling ≈ 0.81).
+- **The assignment rule needs data.** The paper's rule takes any feature that was ≥ 95% precise on
+  the training positions; with few positions per (square, piece), features that fired once or twice
+  get assigned by luck. With 2000 training boards layer 7 drops to F1 0.95 and 21% exact boards;
+  requiring ≥ 5 firings raises the exact-board rate to 81% / 71% / 48% at layers 3 / 7 / 11.
+
+Coverage is in-sample and threshold-optimized, as in the paper, so it reads higher than the held-out
+single-feature F1s of §4 (e.g. check 0.94 here vs 0.76 there). Our "strategy" set is an analogue of
+the paper's (fork and ambiguous-move properties omitted; "threatened squares" = own pieces attacked).
+
+## 11. DESIGN.md checklist
 
 - [x] Hook reproduces Leela's move — proxy: 93.8% of 1000 puzzles, all 134 mate-in-ones (no lc0
   reference binary was available)
@@ -340,10 +405,12 @@ only the averages should be read.
   boards per feature; the joint-ablation and steering results rest on one layer and a handful of
   hypotheses.
 - Effects on the value head and on search were not studied.
+- Random-weights baselines depend on how the net is randomized (§10): permuted trained weights
+  collapse the tokens, a small fresh init passes the input through. Neither is "the" untrained net.
 - Positions come from human games ≥ 2000 Lichess rating, not Leela's own self-play distribution.
 - The move-reproduction gate is a proxy; a check against the lc0 engine itself is still missing.
 
 ## Reproduce
 
-See [README.md](README.md) — `scripts/00` … `scripts/12` regenerate every number and figure here
-(≈ 4 hours on an 8 GB laptop GPU, plus ~2 GB of downloads and ~80 GB of activation caches).
+See [README.md](README.md) — `scripts/00` … `scripts/13` regenerate every number and figure here
+(≈ 5 hours on an 8 GB laptop GPU, plus ~2 GB of downloads and ~120 GB of activation caches).
