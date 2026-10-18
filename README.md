@@ -74,8 +74,8 @@ biased F1s, an inactive causal control, an uninformative loss-recovered metric, 
 training data, dead latents), built the Lichess corpus and retrained, and added the held-out
 evaluation with probe baselines, error-preserving and joint ablations, steering, the history
 filter with its positive control, the layer sweep, the data comparison, auto-interp, the board-
-reconstruction metrics of Karvonen et al. (2024), this README and [RESULTS.md](RESULTS.md); a second
-audit round checked the write-up. Most of the original code was rewritten along the way, but the
+reconstruction metrics of Karvonen et al. (2024), this README and [RESULTS.md](RESULTS.md); two
+more audit rounds checked the write-up. Most of the original code was rewritten along the way, but the
 design, the activation site and token mapping he established, the SAE math and the core idea of
 every evaluation are Leon's and held up under audit. `git log` shows the June history; everything after `cb8b706`
 is the October work.
@@ -110,8 +110,11 @@ Everything below ran on one 8 GB laptop GPU (RTX 5050); times are for that machi
 | 11 | `scripts/11_feature_splitting.py --sae outputs/sae/L7.pt` | How much of each concept the top-n features recover vs a probe | 3 min |
 | 12 | `scripts/12_joint_ablation.py --sae outputs/sae/L7.pt` | Remove a concept's top-n features together; does the policy change? | 10 min |
 | 13 | `scripts/13_board_reconstruction.py outputs/sae/*.pt` | Karvonen et al. (2024) coverage + board reconstruction, with probe baseline; untrained-net controls come from `02`/`03` with `--random-weights 0 --random-init {permute,fresh}` | 5 min / SAE |
+| 14 | `scripts/14_reconstruction_checks.py` | Checks on 13: the paper's exact protocol, trivial baselines for the strategy set, token collapse in the random nets | 10 min |
 
-Artifacts (positions, activation caches, SAEs, JSON results) go to `outputs/` (git-ignored).
+Artifacts (positions, activation caches, SAEs, JSON results) go to `outputs/`. Only
+`outputs/results/` (the JSON and markdown behind every number in RESULTS.md) is committed. The
+rest is regenerable; the caches alone are ~110 GB.
 `notebooks/explore_features.ipynb` is for eyeballing individual features.
 
 ## Layout
@@ -123,7 +126,7 @@ src/
   train.py             training loop, AuxK loss, dead-latent tracking
   data/                lichess.py (corpus), cache.py (activation cache), positions.py (old HF corpus)
   eval/                board_props, codes, correlational, probes, causal (ablation + steering),
-                       history_filter, fidelity, feature_mining
+                       history_filter, fidelity, feature_mining, board_reconstruction
   autointerp/          LLM labeler + detection scoring
   viz/                 board rendering with the firing square highlighted
 scripts/               the numbered pipeline above

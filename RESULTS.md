@@ -41,10 +41,13 @@ Lichess games (never seen in SAE training or feature selection) unless stated ot
 - **The board can be fully reconstructed from SAE features — but in Leela that proves little.**
   With the board-reconstruction metric of [Karvonen et al. 2024](https://arxiv.org/abs/2408.00113),
   the paper this project's eval was modelled on, layer-7 features rebuild the board with F1 0.98 and
-  get every square right in 61% of positions (linear probe: 0.99 / 89%) — far above that paper's
-  chess-language-model SAEs (0.85). But Leela is *given* the board: an SAE on an untrained copy of
-  the net does nearly as well (0.98 / 47%). Training shows on computed properties instead: the
-  trained net's SAE has a check detector (coverage 0.94); the untrained one does not (0.19).
+  get every square right in 61% of positions (linear probe: 0.99 / 89%). That paper's
+  chess-language-model SAEs reach 0.85, but the numbers aren't comparable: Leela is *given* the
+  board, and an SAE on a freshly initialized, untrained copy of the net does as well (F1 0.98).
+  Training shows instead in the form of the features — in the trained net 79 square-agnostic
+  features are the best match for all 668 piece-on-square properties; the untrained net's SAE needs
+  608 — and in computed properties: the trained net's SAE has a check detector (coverage 0.94), the
+  untrained one does not (0.19; a classifier that always says "check" scores 0.11).
 - **The original training data was the wrong data.** The 30k-FEN Hugging Face corpus looks like
   random play (no endgames; 41% of positions have a ≥ 3-pawn material imbalance). At equal budget,
   an SAE trained on it reconstructs real games far worse (FVU 0.29 vs 0.20) than one trained on
@@ -65,7 +68,7 @@ Lichess games (never seen in SAE training or feature selection) unless stated ot
 ## 1. Audit: what the first version got wrong
 
 Three independent agent auditors (hook/data, SAE/training, evaluation) reviewed the code and
-re-ran its claims on the GPU; the fixed version and this write-up were then audited again. In rough
+re-ran its claims on the GPU; the fixed version and this write-up were then audited twice more. In rough
 order of how much they mattered:
 
 | Problem | Effect on the original results | Fix |
@@ -82,6 +85,7 @@ order of how much they mattered:
 | Tests that could not fail | e.g. the causal test passed for 4 of 4 deliberately broken harnesses; the F1 test could not tell F1 from precision | Tests with hand-computed asymmetric cases and "power" checks that must fail when nothing is patched |
 | Found while redoing the eval: the linear-probe threshold was searched on a coarse quantile grid | Probes looked bad on rare properties (in-check: AUROC 1.0 but F1 0.30), which would have made one SAE feature look better than a probe | Exact threshold search |
 | Found by the second audit, in the first draft of this write-up | Claimed the part of each concept missing from single features "lives in the SAE's reconstruction error" — the opposite is true (§4); a pawn-identity feature was listed as a derived concept; several overstatements | Corrected below |
+| Found by a third audit, of the board-reconstruction section (§10) | Credited training with "cleaner" features on a threshold-dependent gap that the paper's own protocol reverses; compared with the paper as if like for like; reported strategy coverage without the always-fires baseline; said the permuted net lost the board entirely | Corrected in §10, with the checks in `scripts/14` |
 
 What was right from the start: the activation site, the token ↔ square mapping (including the
 vertical flip for Black to move), batched capture, the WDL head (probabilities, side-to-move view),
@@ -339,46 +343,86 @@ which scores SAEs on chess and Othello models against the known board with two m
 
 Adapted to Leela: one token per square, so (s, p) is read at token s; pieces in the net's own/enemy
 frame (equivalent, given the side to move); assignment and t chosen on all 15.5k validation boards,
-scored on 2000 test boards. Baselines as in the paper — a linear probe, and SAEs trained the same
-way on random-weights copies of the net. Two copies, because here the choice matters: permuting the
-trained weights (keeping their scale) collapses all 64 tokens into one vector by layer 7, while a
-conventional small-weight init passes the input board through nearly unchanged.
+scored on 2000 test boards (the linear probe: fit on 1500 validation boards, scored on 1500 test
+boards). Baselines as in the paper — a linear probe, and SAEs trained the same way on random-weights
+copies of the net. Two copies, because here the choice matters: permuting the trained weights
+(keeping their scale) collapses all 64 tokens into one vector by layer 7 (variation within a board
+is 0.05% of the total; mean cosine between tokens 1.000), while a conventional small-weight init
+passes the input board through nearly unchanged (mean cosine 0.005).
 
-| | coverage | board F1 | boards fully reconstructed | strategy coverage |
-|---|---|---|---|---|
-| SAE, layer 3 | 0.999 | 0.986 | 67% | 0.81 |
-| SAE, layer 7 | 0.994 | 0.983 | 61% | 0.78 |
-| SAE, layer 11 | 0.977 | 0.966 | 34% | 0.79 |
-| original SAE (layer 7) | 0.984 | 0.953 | 33% | 0.75 |
-| SAE on an untrained net, fresh init (layer 7) | 0.995 | 0.978 | 47% | 0.71 |
-| SAE on an untrained net, permuted weights (layer 7) | 0.31 | 0.09 | 0% | 0.52 |
-| linear probe, layer 7 (trained net / fresh init) | — | 0.993 / 0.979 | 89% / 71% | — |
-| *Karvonen et al., chess LM: best SAE / linear probe / random-net SAE* | *0.48 / 0.98 / 0.11* | *0.85 / 0.98 / 0.01* | — | — |
+| | coverage | board F1 | boards fully reconstructed | best-match features | strategy coverage |
+|---|---|---|---|---|---|
+| SAE, layer 3 | 0.999 | 0.986 | 67% | 59 | 0.81 |
+| SAE, layer 7 | 0.994 | 0.983 | 61% | 79 | 0.78 |
+| SAE, layer 11 | 0.977 | 0.966 | 34% | 81 | 0.79 |
+| original SAE (layer 7) | 0.984 | 0.953 | 32% | 75 | 0.75 |
+| SAE on an untrained net, fresh init (layer 7) | 0.995 | 0.978 | 47% | 608 | 0.71 |
+| SAE on an untrained net, permuted weights (layer 7) | 0.31 | 0.09 | 0% | 499 | 0.52 |
+| linear probe, layer 7 (trained net / fresh init) | — | 0.993 / 0.979 | 89% / 71% | — | — |
+| *Karvonen et al., chess LM: best SAE / linear probe / random-net SAE* | *0.48 / 0.98 / 0.11* | *0.85 / 0.98 / 0.01* | — | — | — |
 
-- **The board can be reconstructed almost perfectly** — far better than the paper's SAEs on a chess
-  language model. Errors are rare: at layer 7, 0.56 wrong squares per board on average and 88% of
-  boards within one square; about three in four errors are a spurious or wrong-type piece, one in
-  four a missed piece. Own pieces
-  are almost never missed (≤ 0.75%), enemy knights and bishops ~2% of the time.
+"Best-match features": how many distinct features are the best single-feature match for the 668
+piece-on-square properties that occur in the test boards.
+
+- **The board can be reconstructed almost perfectly, though not comparably with the paper.** Errors
+  are rare: at layer 7, 0.56 wrong squares per board on average and 88% of boards within one square;
+  about three in four errors are a spurious or wrong-type piece, one in four a missed piece. Own
+  pieces are almost never missed (≤ 0.75%), enemy knights and bishops ~2% of the time. The paper's
+  chess-LM SAEs score 0.85, but that model has one residual vector per position and needs a separate
+  feature for every square. Leela has a token per square, so a single "own knight here" feature can
+  serve all 64: at layer 7, one feature is the best match for 59 of the 668 properties.
 - **But here that is not evidence of learning.** The paper's models read move text, so the board is
   something they must infer. Leela is *given* the board, and an SAE on an untrained, freshly
-  initialized copy of the net reconstructs it nearly as well (F1 0.978, coverage 0.995). Training
-  buys keeping it intact through depth (the permuted-weight net loses it entirely) and somewhat
-  cleaner features (61% vs 47% of boards exactly right).
+  initialized copy of the net reconstructs it as well. At the threshold chosen on training boards
+  the trained net gets more boards exactly right (61% vs 47%), but that gap depends on the
+  threshold: at t = 0.5 the fresh-init SAE gets 71%, more than the trained one's best (61%). Under
+  the paper's own protocol, which takes the best threshold for each test board (its Eq. 5) and does
+  not score pieces on their starting squares, fresh init is level or ahead: F1 0.998 vs 0.992, and
+  0.985 / 75% exact vs 0.979 / 65%. The permuted-weight net shows only that random weights at
+  trained scale scramble the board. Its tokens collapse to one vector, so no feature can say where a
+  piece is (board F1 0.09). A probe from that shared vector to every square still recovers a coarse
+  summary (F1 0.56, against 0.33 for guessing each square's most common class; the trained net's
+  token average gives 0.53).
+- **What training changes is the form of the features.** The trained net's SAE has square-agnostic
+  piece features: 79 features are the best match for all 668 piece-on-square properties, one of them
+  for 59. The fresh-init SAE needs 608, none the best match for more than 4. Reconstruction scores
+  cannot tell the two apart.
 - **The meaningful version of the test is the paper's "strategy" set** — properties that must be
-  computed. There the trained net's SAE has features the untrained one lacks: check 0.94 vs 0.19,
-  queen on the board 0.98 vs 0.87, threatened own pieces 0.58 vs 0.45, pins 0.40 vs 0.33. It is no
-  better for properties readable from the input planes (castling rights: the untrained net scores
-  1.00) or for legal-move squares (0.50 vs 0.56). These coverages are in the same range as the
-  paper's chess-LM SAEs (check 1.00, pin 0.33, legal moves 0.63, castling ≈ 0.81).
+  computed. Scored against a classifier that always says yes (F1 = 2p / (1 + p) at base rate p, the
+  baseline of §4):
+
+  | strategy property | always fires | trained net (L7) | fresh init (L7) |
+  |---|---|---|---|
+  | in check | 0.11 | **0.94** | 0.19 |
+  | own pieces under attack (per square) | 0.06 | **0.58** | 0.45 |
+  | some piece pinned | 0.31 | 0.40 | 0.33 |
+  | a checking move exists | 0.63 | 0.65 | 0.64 |
+  | legal-move destination (per square) | 0.48 | 0.50 | 0.56 |
+  | a queen on the board | 0.87 | 0.98 | 0.87 |
+  | bishop pair | 0.60 | 0.80 | 0.72 |
+  | castling rights (4 properties) | 0.31–0.36 | 0.92–0.97 | 1.00 |
+
+  The trained net's SAE has a check detector the untrained one lacks, and is better on own pieces
+  under attack. Pins are only weakly above trivial for either, and for "a checking move exists" and
+  legal-move squares neither beats always-fires. The queen and castling rows are readable from the
+  input planes. The queen gap probably reflects the square-agnostic features above: one "queen here"
+  feature fires wherever the queen stands, while the fresh-init SAE has no single such feature.
+  Base rates differ from the paper's dataset, so these coverages can't be compared with its numbers.
 - **The assignment rule needs data.** The paper's rule takes any feature that was ≥ 95% precise on
   the training positions; with few positions per (square, piece), features that fired once or twice
   get assigned by luck. With 2000 training boards layer 7 drops to F1 0.95 and 21% exact boards;
   requiring ≥ 5 firings raises the exact-board rate to 81% / 71% / 48% at layers 3 / 7 / 11.
 
 Coverage is in-sample and threshold-optimized, as in the paper, so it reads higher than the held-out
-single-feature F1s of §4 (e.g. check 0.94 here vs 0.76 there). Our "strategy" set is an analogue of
-the paper's (fork and ambiguous-move properties omitted; "threatened squares" = own pieces attacked).
+single-feature F1s of §4 (e.g. "in check" 0.94 here vs 0.75 for §4's best feature, which labels the
+king's square rather than the whole board). Two small departures from the paper make our numbers a
+little conservative: coverage uses one threshold for all properties (the paper takes the best per
+property), and reconstruction uses one threshold chosen on training boards (the paper, the best per
+test board). Our "strategy" set is an analogue of the paper's: fork, ambiguous-move,
+can-capture-queen and en-passant properties are omitted (en passant is invisible without history);
+"a queen on the board" counts either side's queen; castling rights are scored for each side
+separately. The checks in this section beyond scripts/13 come from
+`scripts/14_reconstruction_checks.py` (`outputs/results/board_reconstruction_checks.json`).
 
 ## 11. DESIGN.md checklist
 
@@ -406,11 +450,12 @@ the paper's (fork and ambiguous-move properties omitted; "threatened squares" = 
   hypotheses.
 - Effects on the value head and on search were not studied.
 - Random-weights baselines depend on how the net is randomized (§10): permuted trained weights
-  collapse the tokens, a small fresh init passes the input through. Neither is "the" untrained net.
+  collapse the tokens into one vector, a small fresh init passes the input through. Neither is "the"
+  untrained net, and both were tested at layer 7 only.
 - Positions come from human games ≥ 2000 Lichess rating, not Leela's own self-play distribution.
 - The move-reproduction gate is a proxy; a check against the lc0 engine itself is still missing.
 
 ## Reproduce
 
-See [README.md](README.md) — `scripts/00` … `scripts/13` regenerate every number and figure here
+See [README.md](README.md) — `scripts/00` … `scripts/14` regenerate every number and figure here
 (≈ 5 hours on an 8 GB laptop GPU, plus ~2 GB of downloads and ~120 GB of activation caches).
