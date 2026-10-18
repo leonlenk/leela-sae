@@ -61,3 +61,15 @@ def test_inactive_feature_has_zero_effect_and_active_one_has_some(model, resid_m
     assert off["kl"].abs().max() == 0 and off["dq"].abs().max() == 0          # nothing removed
     on = causal.ablation_effects(model, sae, resid_module, fens, strongest)
     assert on["kl"].min() > 0                                                  # power: effect reaches heads
+
+
+def test_steering_adds_exactly_alpha_times_direction_at_one_token():
+    torch.manual_seed(0)
+    sae = TopKSAE(d_model=8, dict_size=16, k=3)
+    act = torch.randn(2, 64, 8)
+    out = causal._steer_fn(sae, torch.tensor([3, 5]), torch.tensor([10, 0]), torch.tensor([2.0, -1.0]))(act)
+    delta = out - act
+    assert torch.allclose(delta[0, 10], 2.0 * sae.decoder.weight[:, 3]) and torch.allclose(delta[1, 0], -sae.decoder.weight[:, 5])
+    delta[0, 10] = 0
+    delta[1, 0] = 0
+    assert delta.abs().max() == 0                         # nothing else touched

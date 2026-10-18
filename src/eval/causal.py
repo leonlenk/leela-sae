@@ -137,3 +137,57 @@ def feature_vs_control(model, sae, module: str, codes: SparseCodes, fens: list[s
         "target_win_rate": float((eff_f["target_dlogp"][ok].abs() > eff_c["target_dlogp"][ok].abs()).float().mean()) if ok.any() else float("nan"),
         "raw": {"feature": eff_f, "control": eff_c, "boards": boards, "controls": controls},
     }
+
+
+# --------------------------------------------------------------------------------------------------
+# Steering (sufficiency): ADD a feature where it is off and check the policy moves as its meaning
+# predicts. Ablation asks "does the net need this direction?"; at a middle layer the answer can be
+# "no" simply because later layers recompute the fact from the intact board. Steering asks "does
+# writing this direction change what the net does, in the predicted way?"
+# --------------------------------------------------------------------------------------------------
+
+def _steer_fn(sae, features: torch.Tensor, tokens: torch.Tensor, alphas: torch.Tensor,
+              directions: torch.Tensor | None = None):
+    """Add alphas[b] * d_b at token tokens[b] of board b, where d_b is feature features[b]'s unit
+    decoder column — or directions[b] (B, D, unit-norm) if given. act: (B, 64, D)."""
+    W = sae.decoder.weight
+
+    def fn(act):
+        out = act.clone()
+        b = torch.arange(act.shape[0], device=act.device)
+        d = directions.to(act.device, act.dtype) if directions is not None else W[:, features.to(act.device)].T
+        out[b, tokens.to(act.device)] += alphas.to(act.device, act.dtype)[:, None] * d
+        return out
+    return fn
+
+
+@torch.no_grad()
+def steering_effects(model, sae, module: str, fens: list[str], features: torch.Tensor, tokens: torch.Tensor,
+                     alphas: torch.Tensor, target_moves: list[list[int]], batch_size: int = 128,
+                     directions: torch.Tensor | None = None) -> dict[str, torch.Tensor]:
+    """Per board: change in log P(target moves) (indices into the board's legal-move list) and KL,
+    after adding the feature direction at one token."""
+    sae = sae.to(hook.model_device(model)).eval()
+    dlogp, kl = [], []
+    for s in range(0, len(fens), batch_size):
+        sl = slice(s, s + batch_size)
+        chunk = fens[sl]
+        x = hook.encode_fens(chunk)
+        clean = model(x.to(hook.model_device(model)))
+        dirs = directions[sl] if directions is not None else None
+        steered = hook.run_patched(model, x, module, _steer_fn(sae, features[sl], tokens[sl], alphas[sl], dirs))
+        for b, fen in enumerate(chunk):
+            _, idx = hook.legal_moves_and_indices(chess.Board(fen))
+            lp = hook.legal_log_probs(clean["policy"][b], idx)
+            lq = hook.legal_log_probs(steered["policy"][b], idx)
+            t = torch.tensor(target_moves[s + b], device=lp.device)
+            dlogp.append(float(torch.logsumexp(lq[t], 0) - torch.logsumexp(lp[t], 0)))
+            kl.append(float((lp.exp() * (lp - lq)).sum()))
+    return {"target_dlogp": torch.tensor(dlogp), "kl": torch.tensor(kl)}
+
+
+def active_quantile(codes: SparseCodes, feature: int, q: float = 0.9) -> float:
+    """q-quantile of a feature's activation over the tokens where it is active."""
+    v = codes.val[codes.idx == feature]
+    v = v[v > 0]
+    return float(v.quantile(q)) if v.numel() else 0.0

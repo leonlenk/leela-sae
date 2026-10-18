@@ -193,11 +193,20 @@ def main():
     print("positive control:", json.dumps(res["history"]["positive_control_last_move_to"], indent=1))
 
     # ---------------------------------------------------------------- 6. verdicts
+    # Causal threshold is CALIBRATED on the random live features: a property feature passes only if
+    # it beats its matched controls more often than 90% of random features beat theirs. (A fixed
+    # 0.5/0.75 is wrong: the targeted test is biased upward even for random features, because the
+    # control usually fires on other squares than the candidate.)
+    rnd = [c for c in res["causal_random_features"] if c.get("n_boards", 0) >= 32]
+    q90 = lambda key: float(torch.tensor([c[key] for c in rnd if c[key] == c[key]]).quantile(0.9))
+    thr = {"kl_win_rate": q90("kl_win_rate"), "target_win_rate": q90("target_win_rate")}
+    res["causal_thresholds_random_q90"] = thr
     for row in rows:
         c = row["causal"]
         row["passes"] = {
             "correlational": row["test_f1"] >= 0.5 and row["test_f1"] > row["null_f1_p95"] + 0.1,
-            "causal": c.get("n_boards", 0) >= 32 and max(c.get("kl_win_rate", 0), c.get("target_win_rate", 0) or 0) >= 0.75,
+            "causal": c.get("n_boards", 0) >= 32 and (c["kl_win_rate"] > thr["kl_win_rate"]
+                                                     or (c["target_win_rate"] or 0) > thr["target_win_rate"]),
             "history": row["history"]["survives"],
         }
         row["passes"]["all"] = all(row["passes"].values())
