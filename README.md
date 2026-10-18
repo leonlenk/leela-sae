@@ -9,6 +9,46 @@ survive being fed real move history.
 **Results and conclusions: [RESULTS.md](RESULTS.md).** Original plan and design rationale:
 [DESIGN.md](DESIGN.md).
 
+## Who did what
+
+This started as a learning project with an explicit split between human-written and AI-written
+code: files marked 🔒 were written by Leon, files marked 🤖 / ⚙️ ("agent-fillable") by Claude, and
+for every 🔒 function Claude wrote the failing test first and Leon wrote the body (see the original
+contract in DESIGN.md §3.5). Months later Leon asked Claude to finish it.
+
+**Leon (June 2026)**
+- Designed the project ([DESIGN.md](DESIGN.md)): Top-K SAEs on a Leela transformer's per-square
+  residual stream, validated correlationally against python-chess properties and causally through
+  the policy/value heads, with the "a feature is only real if it passes three checks" criterion.
+- Wrote the hook (`src/hook.py`, `scripts/01`): loading BT3 through lczerolens, reproducing Leela's
+  moves, finding the per-block residual sites (`encoderN/ln2`), batched capture. Measured that the
+  net depends on its move-history planes and pivoted the design from "history-free net" to "history
+  as a controlled confound" with the repeated-board encoding.
+- Wrote the SAE and training loop (`src/sae.py`, `src/train.py`, `scripts/02`): Top-K encoding,
+  unit-norm decoder, AuxK dead-latent revival, dead-latent tracking, warmup, and a KL-based
+  "loss recovered" metric spliced through the net.
+- Wrote the evaluation (`src/eval/board_props.py`, `correlational.py`, `causal.py`,
+  `feature_mining.py`, and two notebooks): side-to-move-relative per-square labels, best-feature F1,
+  feature patching measured as policy KL, top-activation mining and a feature-density scan.
+- Chose the model, layer 7, k = 32, the 8× dictionary and the original training data.
+
+**Claude, June 2026 (🤖 / ⚙️ files)** — the repo scaffold and environment, the tests-first
+scaffolds for every 🔒 function, the activation cache (`src/data/cache.py`), the HF corpus loader
+(`src/data/positions.py`) and the board renderer (`src/viz/features.py`).
+
+**Claude, October 2026 (finishing it)** — at Leon's request, Claude (Opus 5.5 in Claude Code) took
+the project over: had independent agent auditors review the code and claims, fixed what they found
+(the policy head read mostly through illegal-move slots, castling and promotion bugs, selection-
+biased F1s, an inactive causal control, an uninformative loss-recovered metric, off-distribution
+training data, dead latents), built the Lichess corpus and retrained, and added the held-out
+evaluation with probe baselines, error-preserving and joint ablations, steering, the history
+filter with its positive control, the layer sweep, the data comparison, auto-interp, the board-
+reconstruction metrics of Karvonen et al. (2024), this README and [RESULTS.md](RESULTS.md); a second
+audit round checked the write-up. Most of the original code was rewritten along the way, but the
+design, the activation site and token mapping he established, the SAE math and the core idea of
+every evaluation are Leon's and held up under audit. `git log` shows the June history; everything after `cb8b706`
+is the October work.
+
 ## Setup
 
 ```bash

@@ -1,28 +1,19 @@
 # Working agreement
 
-This is a LEARNING project. I write the core code myself; you scaffold it so I
-can learn. Respect these ownership rules:
-
-## 🔒 files — I write the bodies, you scaffold (see DESIGN.md §3.5)
-Files: src/sae.py, src/hook.py, src/eval/*.py, src/train.py (single-GPU part),
-scripts/01_*, scripts/02_*.
-For these, NEVER write the function body. Instead hand me a guided scaffold:
-  1. TESTS FIRST: write the test(s) for the function in tests/, with REAL runnable
-     assertions, BEFORE I implement. I code against a failing test (red→green).
-  2. HEAVY COMMENTS: inline comment the *why* on every non-obvious line; shape
-     annotations on all tensor ops (e.g. `# (B, 64, d_model)`); a 2–4 line concept
-     comment on anything conceptual (top-k mask, aux loss, F1).
-  3. GRANULAR TODOS: break the body into small ordered steps `# TODO (1): ...`,
-     `# TODO (2): ...` — each a single few-line move. Never one big TODO.
-  4. End the function with `raise NotImplementedError` until I fill it in.
-When I ask for a 🔒 file, give me the commented stub + the failing test + a short
-plain-English explanation of the approach. NEVER the body.
-
-## 🤖 / ⚙️ files — you may fully implement
-src/data/*, src/viz/*, src/autointerp/*, configs/*, pyproject.toml, and the
-Accelerate wrapper in train.py (ONLY after a working single-GPU loop exists).
+Status: the project is finished — results in RESULTS.md, pipeline and authorship in README.md.
+It began as a learning project in which Leon wrote the 🔒 files and Claude only scaffolded them
+(DESIGN.md §3.5); in October 2026 Leon asked Claude to finish it, so that contract no longer
+applies. Ask before large new experiments.
 
 ## Always
-- Never silently change the activation site or include the history stack.
-- For hook/eval tests: I will personally verify each assertion checks the right
-  thing before trusting it. Flag any assertion you're unsure about.
+- Never silently change the activation site (`encoderN/ln2`) or the input encoding. Main SAEs use
+  the history-free encoding (`hook.encode_fens`); real move history enters only explicitly, via
+  `hook.encode_boards_with_history`.
+- Read the policy head only through `hook.legal_moves_and_indices` / `hook.legal_log_probs`
+  (illegal slots are untrained; castling is king-takes-rook).
+- Evaluation: select features / fit probes on the validation split, report on the test split, and
+  show a baseline (probe, permutation null, matched control, untrained net) next to every number.
+  Every number in RESULTS.md must trace to a file in `outputs/results/`.
+- For hook/eval tests: each assertion states the hand-checkable fact it encodes, and include a
+  power check that fails when nothing is patched. Flag any assertion you're unsure about.
+- `scripts/07_autointerp.py` calls the `claude` CLI and spends Leon's subscription — ask first.
