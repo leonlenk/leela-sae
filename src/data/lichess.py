@@ -1,4 +1,4 @@
-"""Lichess position corpus: sample positions (with their real move history) from rated human games (🤖).
+"""Lichess position corpus: sample positions (with their real move history) from rated human games.
 
 Why this exists: the original HF corpus (src/data/positions.py) is ~30k bare FENs of unknown
 provenance and no move history. For an SAE we want (a) many more, independent, realistic positions

@@ -1,4 +1,4 @@
-"""Activation caching: run the net over a corpus and stream residuals to disk (🤖).
+"""Activation caching: run the net over a corpus and stream residuals to disk.
 
 The SAE trains on individual d_model residual vectors. A board produces 64 of them (one per square),
 so caching is: for every FEN capture (64, d_model), pile them up as (N, 64, d_model) on disk, and

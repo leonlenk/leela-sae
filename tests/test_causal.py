@@ -30,9 +30,11 @@ def test_ablation_subtracts_exactly_the_feature_contribution():
 def test_ablating_an_inactive_feature_is_an_exact_noop():
     torch.manual_seed(0)
     sae = TopKSAE(d_model=8, dict_size=32, k=4)
+    dead = 7
+    with torch.no_grad():
+        sae.encoder.bias[dead] = -1e3                      # feature 7 can never be positive -> inactive
     act = torch.randn(1, 64, 8)
-    feats = sae.encode(act.reshape(-1, 8))[0]
-    dead = int(torch.nonzero(feats.sum(0) == 0).flatten()[0])
+    assert sae.encode(act.reshape(-1, 8))[0][:, dead].abs().sum() == 0
     assert torch.equal(causal._ablation_fn(sae, torch.tensor([dead]))(act), act)
 
 

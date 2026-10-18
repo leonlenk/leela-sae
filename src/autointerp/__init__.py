@@ -1,1 +1,1 @@
-"""Auto-interp: DSPy pipeline + optional vLLM-served labeler (agent-fillable 🤖)."""
+"""Auto-interp: LLM-written feature labels, scored by held-out detection (labeler.py)."""

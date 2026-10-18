@@ -1,4 +1,4 @@
-"""Tests for the activation cacher (src/data/cache.py, 🤖).
+"""Tests for the activation cacher (src/data/cache.py).
 
 No net needed: we inject a FAKE capture_fn whose values ENCODE (board index, square index) so we
 can assert the on-disk layout and the flatten reshape map rows back to the right board+square.

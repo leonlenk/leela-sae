@@ -1,4 +1,4 @@
-"""Eyeball helpers for the "believe one feature" check (agent-fillable 🤖).
+"""Eyeball helpers for the "believe one feature" check.
 
 These do the BORING part of DESIGN.md §4 step 5: once you have a list of top-activating
 (fen, square, activation) triples for one SAE feature, render each board with the firing square

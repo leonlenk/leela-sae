@@ -1,4 +1,4 @@
-"""Tests for the Top-K SAE, written FIRST (DESIGN.md §3.5a). Run red, implement src/sae.py TODOs, run green."""
+"""Tests for the Top-K SAE (src/sae.py): sparsity, init, gradient flow, decoder norm, persistence."""
 
 import torch
 

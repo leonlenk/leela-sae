@@ -1,17 +1,10 @@
-"""Position distribution (you pick) + Ray workers for parallel generation (agent scaffolds ⚙️).
+"""The ORIGINAL training corpus: ~30k FENs from the HF dataset bonna46/Chess-FEN-and-NL-Format-30K-Dataset.
 
-The "distribution you pick" (DESIGN.md §3, step 3) is a fixed corpus of real chess positions:
-the `bonna46/Chess-FEN-and-NL-Format-30K-Dataset` on the HuggingFace Hub. We use only its `FEN`
-column — ~30k unique, already-valid FENs spanning real midgame/endgame positions. That breadth is
-the whole point for SAE training: the residual-stream features we want to surface only light up
-across a varied board distribution, not the handful of openings you'd get from self-play seeds.
-
-Why a static corpus instead of Ray-parallel self-play: the expensive, parallelizable step in this
-project is the *activation capture* (running every FEN through the Leela net), and that already
-lives behind `capture_fn` in src/data/cache.py. Reading 30k strings out of one cached CSV is I/O
-that finishes in well under a second, so a Ray fan-out here would be pure ceremony. If you later
-swap to a generated distribution (Lichess puzzles, X% random, self-play), this is the file that
-grows the Ray workers — the cacher downstream won't change.
+Superseded by src/data/lichess.py and kept only so scripts/05_data_comparison.py can reproduce the
+comparison. The 2026-10 audit found it off-distribution for this net: no endgames (median 30 pieces),
+41% of positions with a >= 3-pawn material imbalance, two-thirds of its "best moves" are captures,
+Leela rates 68% of positions as decisive — it looks like random play, not real games — and it has no
+move histories. See RESULTS.md.
 """
 
 from __future__ import annotations

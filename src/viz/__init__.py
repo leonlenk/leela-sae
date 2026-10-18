@@ -1,1 +1,1 @@
-"""Visualization: plots and wandb logging (agent-fillable 🤖)."""
+"""Visualization: render boards with a feature's firing squares highlighted."""

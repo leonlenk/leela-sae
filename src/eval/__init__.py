@@ -1,1 +1,1 @@
-"""Evaluation: correlational (board props / F1) and causal (patching) — you write these (🔒)."""
+"""Evaluation: ground-truth properties, correlational / causal / history checks, fidelity, probes."""
