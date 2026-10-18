@@ -2,7 +2,7 @@
 
 No net needed: we inject a FAKE capture_fn whose values ENCODE (board index, square index) so we
 can assert the on-disk layout and the flatten reshape map rows back to the right board+square.
-This is the contract 02_train_small.py relies on when it traces a firing back to a position.
+This is the row <-> (board, token) contract feature mining relies on to trace a firing back to a position.
 """
 
 import numpy as np
