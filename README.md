@@ -34,8 +34,10 @@ Everything below ran on one 8 GB laptop GPU (RTX 5050); times are for that machi
 | 6 | `scripts/06_fidelity_table.py outputs/sae/*.pt` | One fidelity table for all SAEs | 10 min |
 | 7 | `scripts/07_autointerp.py --sae outputs/sae/L7.pt` | LLM feature labels + held-out detection scores (uses the `claude` CLI) | 15 min |
 | 8 | `scripts/08_steering.py --sae outputs/sae/L7.pt` | Write features where they're off; does the policy move as predicted? | 5 min |
-| 9 | `scripts/09_history_control.py` | History-filter positive control (needs a real-history SAE, see its docstring) | 25 min |
-| 10 | `scripts/10_figures.py` | Figures in `docs/figures/` and the tables in RESULTS.md | 1 min |
+| 9 | `scripts/09_history_control.py` | History-filter positive control; first cache + train a real-history SAE (`02 --real-history`, `03 --real-history --tag realhist`, see its docstring) | 25 min |
+| 10 | `scripts/10_figures.py [--galleries]` | Figures in `docs/figures/` and per-property verdict tables | 1 min |
+| 11 | `scripts/11_feature_splitting.py --sae outputs/sae/L7.pt` | How much of each concept the top-n features recover vs a probe | 3 min |
+| 12 | `scripts/12_joint_ablation.py --sae outputs/sae/L7.pt` | Remove a concept's top-n features together; does the policy change? | 10 min |
 
 Artifacts (positions, activation caches, SAEs, JSON results) go to `outputs/` (git-ignored).
 `notebooks/explore_features.ipynb` is for eyeballing individual features.

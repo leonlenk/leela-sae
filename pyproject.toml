@@ -5,22 +5,15 @@ description = "Train a sparse autoencoder on a Leela Chess Zero residual stream 
 readme = "README.md"
 requires-python = ">=3.10,<3.14"
 dependencies = [
-    # --- core: hook + SAE (steps 1-2) ---
-    "lczerolens[hf,viz]>=0.4.0",  # load BT nets via from_hf, differentiable graph
+    "lczerolens[hf,viz]>=0.4.0",  # load BT nets from the HF Hub (ONNX -> torch), board encoding
     "torch>=2.5.0",
     "chess>=1.11",                # python-chess: board-state ground truth
     "numpy>=1.26",
-    "pyyaml>=6.0",                # config loading
-    "tqdm>=4.66",                 # progress bars (e.g. activation caching)
-    # --- data pipeline (step 3) ---
-    "ray>=2.40",                  # parallel position generation + shuffle plumbing
-    # --- scaling + logging (step 3b) ---
-    "accelerate>=1.0",            # multi-GPU wrapper (after single-GPU loop works)
-    "wandb>=0.18",
-    "matplotlib>=3.10",
-    # --- auto-interp (step 5, side deliverable) ---
-    "dspy>=3.0",
-    "nnsight>=0.7.0",
+    "pandas>=2.0",                # position corpora
+    "pyarrow>=15",                # parquet (Lichess dumps, corpus file)
+    "huggingface-hub>=0.24",      # dataset downloads
+    "tqdm>=4.66",
+    "matplotlib>=3.10",           # figures
 ]
 
 [build-system]
@@ -36,19 +29,15 @@ build-backend = "hatchling.build"
 # project name.
 packages = ["src"]
 
-[project.optional-dependencies]
-# Heavy, CUDA/Python-version-sensitive vLLM labeler — install explicitly:
-#   uv sync --extra serve
-serve = ["vllm>=0.6"]
-
 [dependency-groups]
 dev = [
     "pytest>=8.0",
+    "nnsight>=0.7.0",             # cross-checks our forward-hook capture (tests/test_hook.py)
+    "ipykernel>=6.29",            # run notebooks/ from the project environment
 ]
 
 [tool.pytest.ini_options]
-# package = false means the repo isn't installed; put the root on sys.path so the
-# design's own test imports (`from src.sae import TopKSAE`) resolve under `uv run pytest`.
+# Put the repo root on sys.path so `from src...` and `from conftest import ...` resolve in tests.
 pythonpath = ["."]
 testpaths = ["tests"]
 filterwarnings = [
@@ -64,5 +53,4 @@ filterwarnings = [
 # scripts and notebooks, not just under pytest's `pythonpath`. Still a research
 # artifact (DESIGN.md non-goal): we don't publish it, just install it locally.
 package = true
-# Keep the default sync lean; vLLM is opt-in via the `serve` extra.
 default-groups = ["dev"]
