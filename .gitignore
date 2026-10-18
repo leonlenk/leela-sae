@@ -1,4 +1,5 @@
-outputs/
+outputs/*
+!outputs/results/
 
 # Python
 __pycache__/

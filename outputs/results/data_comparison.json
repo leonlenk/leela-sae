@@ -1,0 +1,82 @@
+{
+  "trained_on_hf": {
+    "eval_lichess": {
+      "n_boards": 500,
+      "fvu": 0.29364538879341356,
+      "l0": 32.0,
+      "kl_recon_mean": 0.05699710175395012,
+      "kl_recon_median": 0.0329221710562706,
+      "kl_recon_p90": 0.13127830624580383,
+      "kl_zero_mean": 1.7106945514678955,
+      "kl_mean_ablation_mean": 2.261039972305298,
+      "loss_recovered_vs_zero": 0.9666818976402283,
+      "loss_recovered_vs_mean": 0.9747916460037231,
+      "top1_agree_recon": 0.8399999737739563,
+      "top1_agree_mean_ablation": 0.0560000017285347,
+      "abs_dq_recon_mean": 0.059462107717990875,
+      "kl_noise_mean": 0.015057306736707687,
+      "top1_agree_noise": 0.906000018119812,
+      "abs_dq_noise_mean": 0.023273590952157974,
+      "error_vs_noise_kl_ratio": 3.7853450775146484
+    },
+    "eval_hf": {
+      "n_boards": 500,
+      "fvu": 0.16689304292468726,
+      "l0": 32.0,
+      "kl_recon_mean": 0.01658291183412075,
+      "kl_recon_median": 0.008324486203491688,
+      "kl_recon_p90": 0.04414971172809601,
+      "kl_zero_mean": 1.8281667232513428,
+      "kl_mean_ablation_mean": 2.529841899871826,
+      "loss_recovered_vs_zero": 0.9909291863441467,
+      "loss_recovered_vs_mean": 0.993445098400116,
+      "top1_agree_recon": 0.9380000233650208,
+      "top1_agree_mean_ablation": 0.057999998331069946,
+      "abs_dq_recon_mean": 0.029574276879429817,
+      "kl_noise_mean": 0.006933832075446844,
+      "top1_agree_noise": 0.9319999814033508,
+      "abs_dq_noise_mean": 0.014534427784383297,
+      "error_vs_noise_kl_ratio": 2.391594171524048
+    }
+  },
+  "trained_on_lichess": {
+    "eval_lichess": {
+      "n_boards": 500,
+      "fvu": 0.19892541609118106,
+      "l0": 32.0,
+      "kl_recon_mean": 0.030252870172262192,
+      "kl_recon_median": 0.01863555610179901,
+      "kl_recon_p90": 0.07695863395929337,
+      "kl_zero_mean": 1.7106945514678955,
+      "kl_mean_ablation_mean": 2.261039972305298,
+      "loss_recovered_vs_zero": 0.9823154211044312,
+      "loss_recovered_vs_mean": 0.9866199493408203,
+      "top1_agree_recon": 0.878000020980835,
+      "top1_agree_mean_ablation": 0.0560000017285347,
+      "abs_dq_recon_mean": 0.04845338687300682,
+      "kl_noise_mean": 0.01094263605773449,
+      "top1_agree_noise": 0.9300000071525574,
+      "abs_dq_noise_mean": 0.020257635042071342,
+      "error_vs_noise_kl_ratio": 2.764678478240967
+    },
+    "eval_hf": {
+      "n_boards": 500,
+      "fvu": 0.21923078471803528,
+      "l0": 32.0,
+      "kl_recon_mean": 0.023082319647073746,
+      "kl_recon_median": 0.01096094585955143,
+      "kl_recon_p90": 0.0569024421274662,
+      "kl_zero_mean": 1.8281667232513428,
+      "kl_mean_ablation_mean": 2.529841899871826,
+      "loss_recovered_vs_zero": 0.9873740673065186,
+      "loss_recovered_vs_mean": 0.9908759593963623,
+      "top1_agree_recon": 0.8920000195503235,
+      "top1_agree_mean_ablation": 0.057999998331069946,
+      "abs_dq_recon_mean": 0.051194895058870316,
+      "kl_noise_mean": 0.008829505182802677,
+      "top1_agree_noise": 0.921999990940094,
+      "abs_dq_noise_mean": 0.01636526547372341,
+      "error_vs_noise_kl_ratio": 2.6142256259918213
+    }
+  }
+}

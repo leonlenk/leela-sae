@@ -1,0 +1,1311 @@
+{
+ "L3": {
+  "coverage": 0.998859167098999,
+  "coverage_t": 0.1,
+  "coverage_per_piece": {
+   "own_pawn": 1.0,
+   "own_knight": 0.9999489188194275,
+   "own_bishop": 1.0,
+   "own_rook": 1.0,
+   "own_queen": 1.0,
+   "own_king": 1.0,
+   "enemy_pawn": 0.9874496459960938,
+   "enemy_knight": 0.9972748160362244,
+   "enemy_bishop": 1.0,
+   "enemy_rook": 1.0,
+   "enemy_queen": 1.0,
+   "enemy_king": 0.9996393918991089
+  },
+  "reconstruction": {
+   "f1": 0.9859532769934733,
+   "exact_board_rate": 0.6695,
+   "precision": 0.9750477632734135,
+   "recall": 0.9989463068076296
+  },
+  "reconstruction_t": 0.4,
+  "per_threshold": {
+   "0.0": {
+    "coverage_test": 0.9967253804206848,
+    "reconstruction_train": {
+     "f1": 0.9366362891985491,
+     "exact_board_rate": 0.07356262502419823,
+     "precision": 0.8846739119510851,
+     "recall": 0.9997657527540511
+    },
+    "reconstruction_test": {
+     "f1": 0.920074215126287,
+     "exact_board_rate": 0.043,
+     "precision": 0.8580807035899819,
+     "recall": 0.9996773965929645
+    },
+    "n_assigned_pairs": 37721
+   },
+   "0.1": {
+    "coverage_test": 0.998859167098999,
+    "reconstruction_train": {
+     "f1": 0.9500554981282752,
+     "exact_board_rate": 0.1324127250435568,
+     "precision": 0.9079013882723692,
+     "recall": 0.9999845185456224
+    },
+    "reconstruction_test": {
+     "f1": 0.9338282989654929,
+     "exact_board_rate": 0.0855,
+     "precision": 0.8813111305526733,
+     "recall": 1.0
+    },
+    "n_assigned_pairs": 38783
+   },
+   "0.2": {
+    "coverage_test": 0.9978683590888977,
+    "reconstruction_train": {
+     "f1": 0.9796511271635704,
+     "exact_board_rate": 0.43072852810221335,
+     "precision": 0.9613582923015728,
+     "recall": 0.9999924518073748
+    },
+    "reconstruction_test": {
+     "f1": 0.9639386798505694,
+     "exact_board_rate": 0.278,
+     "precision": 0.9341402403741781,
+     "recall": 1.0
+    },
+    "n_assigned_pairs": 40553
+   },
+   "0.3": {
+    "coverage_test": 0.9952025413513184,
+    "reconstruction_train": {
+     "f1": 0.9930226255441941,
+     "exact_board_rate": 0.7434987416919404,
+     "precision": 0.986643262412365,
+     "recall": 0.9998877865845673
+    },
+    "reconstruction_test": {
+     "f1": 0.9801039003617334,
+     "exact_board_rate": 0.523,
+     "precision": 0.963283449574264,
+     "recall": 0.9998004414008724
+    },
+    "n_assigned_pairs": 38838
+   },
+   "0.4": {
+    "coverage_test": 0.9830140471458435,
+    "reconstruction_train": {
+     "f1": 0.9972164758934808,
+     "exact_board_rate": 0.8873330321997807,
+     "precision": 0.9955045555446134,
+     "recall": 0.9990885203461983
+    },
+    "reconstruction_test": {
+     "f1": 0.9859532769934733,
+     "exact_board_rate": 0.6695,
+     "precision": 0.9750477632734135,
+     "recall": 0.9989463068076296
+    },
+    "n_assigned_pairs": 35185
+   },
+   "0.5": {
+    "coverage_test": 0.9384228587150574,
+    "reconstruction_train": {
+     "f1": 0.9966531059823821,
+     "exact_board_rate": 0.8708782344969994,
+     "precision": 0.998413488005082,
+     "recall": 0.9950868991197016
+    },
+    "reconstruction_test": {
+     "f1": 0.9864412455221874,
+     "exact_board_rate": 0.672,
+     "precision": 0.9800498439314007,
+     "recall": 0.99433432432151
+    },
+    "n_assigned_pairs": 30655
+   },
+   "0.6": {
+    "coverage_test": 0.7981056571006775,
+    "reconstruction_train": {
+     "f1": 0.9709053373350187,
+     "exact_board_rate": 0.31754533135445573,
+     "precision": 0.9995688711434225,
+     "recall": 0.9454630841464297
+    },
+    "reconstruction_test": {
+     "f1": 0.9612800209171218,
+     "exact_board_rate": 0.2405,
+     "precision": 0.9854563986274808,
+     "recall": 0.9407987033942944
+    },
+    "n_assigned_pairs": 24907
+   },
+   "0.7": {
+    "coverage_test": 0.5286179780960083,
+    "reconstruction_train": {
+     "f1": 0.7796876070241947,
+     "exact_board_rate": 0.010453636187649223,
+     "precision": 0.9997047129539298,
+     "recall": 0.6491908847346046
+    },
+    "reconstruction_test": {
+     "f1": 0.7633957529074928,
+     "exact_board_rate": 0.002,
+     "precision": 0.9888061887793822,
+     "recall": 0.6324640202690107
+    },
+    "n_assigned_pairs": 18538
+   },
+   "0.8": {
+    "coverage_test": 0.23757903277873993,
+    "reconstruction_train": {
+     "f1": 0.34634996189446027,
+     "exact_board_rate": 0.0010324578950764664,
+     "precision": 0.9806615924638767,
+     "recall": 0.22077534178620767
+    },
+    "reconstruction_test": {
+     "f1": 0.3181742740273738,
+     "exact_board_rate": 0.0,
+     "precision": 0.9605962121212122,
+     "recall": 0.19885065049153422
+    },
+    "n_assigned_pairs": 11490
+   },
+   "0.9": {
+    "coverage_test": 0.08673778921365738,
+    "reconstruction_train": {
+     "f1": 0.06808673518764827,
+     "exact_board_rate": 6.452861844227915e-05,
+     "precision": 0.49080467187197524,
+     "recall": 0.038499749540662424
+    },
+    "reconstruction_test": {
+     "f1": 0.04252161816802442,
+     "exact_board_rate": 0.0,
+     "precision": 0.3773333333333333,
+     "recall": 0.022920435967469885
+    },
+    "n_assigned_pairs": 5504
+   }
+  },
+  "strategy_coverage": {
+   "legal_moves": 0.5752526521682739,
+   "threatened_squares": 0.6086422801017761,
+   "check": 1.0,
+   "can_check": 0.68808911739503,
+   "queen": 0.9867197875166003,
+   "pin": 0.44580152671755724,
+   "own_can_castle_kingside": 0.9694915254237289,
+   "own_can_castle_queenside": 0.9612756264236902,
+   "enemy_can_castle_kingside": 0.9413333333333334,
+   "enemy_can_castle_queenside": 0.9202614379084967,
+   "bishop_pair": 0.828039430449069,
+   "mean": 0.811355156130687
+  },
+  "min_fires_5": {
+   "reconstruction": {
+    "f1": 0.9944389970004516,
+    "exact_board_rate": 0.812,
+    "precision": 0.9911231466567695,
+    "recall": 0.9982078943000005
+   },
+   "reconstruction_t": 0.4
+  },
+  "linear_probe": {
+   "f1": 0.9937866116035214,
+   "exact_board_rate": 0.8846666666666667,
+   "precision": 0.9924421682476046,
+   "recall": 0.9965867629036147
+  },
+  "layer": 3,
+  "random_weights": null
+ },
+ "L7": {
+  "coverage": 0.994127631187439,
+  "coverage_t": 0.1,
+  "coverage_per_piece": {
+   "own_pawn": 0.9993422627449036,
+   "own_knight": 0.98919677734375,
+   "own_bishop": 0.9983596801757812,
+   "own_rook": 0.9985089302062988,
+   "own_queen": 0.9987815618515015,
+   "own_king": 0.9985213279724121,
+   "enemy_pawn": 0.9977014660835266,
+   "enemy_knight": 0.9986475706100464,
+   "enemy_bishop": 0.9903284907341003,
+   "enemy_rook": 0.9767827391624451,
+   "enemy_queen": 0.9886159300804138,
+   "enemy_king": 0.9994500875473022
+  },
+  "reconstruction": {
+   "f1": 0.9828138610764352,
+   "exact_board_rate": 0.6115,
+   "precision": 0.9747541193550299,
+   "recall": 0.9928050297631937
+  },
+  "reconstruction_t": 0.5,
+  "per_threshold": {
+   "0.0": {
+    "coverage_test": 0.9899231791496277,
+    "reconstruction_train": {
+     "f1": 0.9309336884905354,
+     "exact_board_rate": 0.05401045363618765,
+     "precision": 0.8759406902129054,
+     "recall": 0.9974387083859094
+    },
+    "reconstruction_test": {
+     "f1": 0.9069567835345709,
+     "exact_board_rate": 0.0185,
+     "precision": 0.8383633434651858,
+     "recall": 0.9965441419905074
+    },
+    "n_assigned_pairs": 39022
+   },
+   "0.1": {
+    "coverage_test": 0.994127631187439,
+    "reconstruction_train": {
+     "f1": 0.940888619124801,
+     "exact_board_rate": 0.08169323094792541,
+     "precision": 0.8918348057892941,
+     "recall": 0.9992311109772777
+    },
+    "reconstruction_test": {
+     "f1": 0.9172265868721554,
+     "exact_board_rate": 0.0305,
+     "precision": 0.8537681057738139,
+     "recall": 0.9994246841975778
+    },
+    "n_assigned_pairs": 40254
+   },
+   "0.2": {
+    "coverage_test": 0.9935392141342163,
+    "reconstruction_train": {
+     "f1": 0.9707346321607604,
+     "exact_board_rate": 0.2832806349616055,
+     "precision": 0.9450961912190531,
+     "recall": 0.999530517239985
+    },
+    "reconstruction_test": {
+     "f1": 0.9490372982841361,
+     "exact_board_rate": 0.144,
+     "precision": 0.9083810256288375,
+     "recall": 0.9994288055424262
+    },
+    "n_assigned_pairs": 43850
+   },
+   "0.3": {
+    "coverage_test": 0.9879083037376404,
+    "reconstruction_train": {
+     "f1": 0.9885181003157449,
+     "exact_board_rate": 0.6132154610569788,
+     "precision": 0.9786755078876913,
+     "recall": 0.9992021306163915
+    },
+    "reconstruction_test": {
+     "f1": 0.9696589944293913,
+     "exact_board_rate": 0.3745,
+     "precision": 0.9455782318280455,
+     "recall": 0.9989072126894523
+    },
+    "n_assigned_pairs": 42887
+   },
+   "0.4": {
+    "coverage_test": 0.972918689250946,
+    "reconstruction_train": {
+     "f1": 0.9950385746194409,
+     "exact_board_rate": 0.8106085048719107,
+     "precision": 0.9918089339663144,
+     "recall": 0.9985876229409684
+    },
+    "reconstruction_test": {
+     "f1": 0.9792867530203646,
+     "exact_board_rate": 0.5425,
+     "precision": 0.9635979156853642,
+     "recall": 0.9981103798759443
+    },
+    "n_assigned_pairs": 38643
+   },
+   "0.5": {
+    "coverage_test": 0.9116179943084717,
+    "reconstruction_train": {
+     "f1": 0.9955798593541838,
+     "exact_board_rate": 0.8468090598180293,
+     "precision": 0.9973062760976528,
+     "recall": 0.9941620490001446
+    },
+    "reconstruction_test": {
+     "f1": 0.9828138610764352,
+     "exact_board_rate": 0.6115,
+     "precision": 0.9747541193550299,
+     "recall": 0.9928050297631937
+    },
+    "n_assigned_pairs": 32936
+   },
+   "0.6": {
+    "coverage_test": 0.762730598449707,
+    "reconstruction_train": {
+     "f1": 0.960644229815948,
+     "exact_board_rate": 0.23501322836678068,
+     "precision": 0.9992650906276688,
+     "recall": 0.9276333771242251
+    },
+    "reconstruction_test": {
+     "f1": 0.9489701954107065,
+     "exact_board_rate": 0.17,
+     "precision": 0.9834490394388875,
+     "recall": 0.9202856367824865
+    },
+    "n_assigned_pairs": 26232
+   },
+   "0.7": {
+    "coverage_test": 0.49363037943840027,
+    "reconstruction_train": {
+     "f1": 0.7527332303410843,
+     "exact_board_rate": 0.004646060527844099,
+     "precision": 0.9993090478255499,
+     "recall": 0.6161482676533189
+    },
+    "reconstruction_test": {
+     "f1": 0.7336102064157701,
+     "exact_board_rate": 0.0,
+     "precision": 0.9842714147516483,
+     "recall": 0.5980260653269449
+    },
+    "n_assigned_pairs": 18715
+   },
+   "0.8": {
+    "coverage_test": 0.21220514178276062,
+    "reconstruction_train": {
+     "f1": 0.33044987004162457,
+     "exact_board_rate": 0.0007098148028650707,
+     "precision": 0.9598303204614104,
+     "recall": 0.2074469915731524
+    },
+    "reconstruction_test": {
+     "f1": 0.3026693255012446,
+     "exact_board_rate": 0.0,
+     "precision": 0.9256203192640693,
+     "recall": 0.1871086569863671
+    },
+    "n_assigned_pairs": 11331
+   },
+   "0.9": {
+    "coverage_test": 0.06081471964716911,
+    "reconstruction_train": {
+     "f1": 0.06584068833524184,
+     "exact_board_rate": 6.452861844227915e-05,
+     "precision": 0.49570884687358846,
+     "recall": 0.03693653221735296
+    },
+    "reconstruction_test": {
+     "f1": 0.04133665452955461,
+     "exact_board_rate": 0.0,
+     "precision": 0.3733333333333333,
+     "recall": 0.02229335071814507
+    },
+    "n_assigned_pairs": 5533
+   }
+  },
+  "strategy_coverage": {
+   "legal_moves": 0.5025136470794678,
+   "threatened_squares": 0.5772253274917603,
+   "check": 0.9392712550607287,
+   "can_check": 0.6466165413533834,
+   "queen": 0.9843594009983361,
+   "pin": 0.39655172413793105,
+   "own_can_castle_kingside": 0.9688888888888889,
+   "own_can_castle_queenside": 0.9645714285714285,
+   "enemy_can_castle_kingside": 0.9324324324324325,
+   "enemy_can_castle_queenside": 0.9156293222683264,
+   "bishop_pair": 0.8019911504424779,
+   "mean": 0.7845501017022873
+  },
+  "min_fires_5": {
+   "reconstruction": {
+    "f1": 0.9907107589666854,
+    "exact_board_rate": 0.707,
+    "precision": 0.9852173615523893,
+    "recall": 0.996871350780122
+   },
+   "reconstruction_t": 0.4
+  },
+  "linear_probe": {
+   "f1": 0.9932344012550681,
+   "exact_board_rate": 0.8906666666666667,
+   "precision": 0.991642603732856,
+   "recall": 0.9962357350919326
+  },
+  "layer": 7,
+  "random_weights": null
+ },
+ "L11": {
+  "coverage": 0.9768059849739075,
+  "coverage_t": 0.1,
+  "coverage_per_piece": {
+   "own_pawn": 0.9556487202644348,
+   "own_knight": 0.9994561076164246,
+   "own_bishop": 0.9987256526947021,
+   "own_rook": 0.9886203408241272,
+   "own_queen": 0.9911552667617798,
+   "own_king": 0.9947569370269775,
+   "enemy_pawn": 0.8997798562049866,
+   "enemy_knight": 0.9774848222732544,
+   "enemy_bishop": 0.9592123627662659,
+   "enemy_rook": 0.9759524464607239,
+   "enemy_queen": 0.9728209376335144,
+   "enemy_king": 0.9967427253723145
+  },
+  "reconstruction": {
+   "f1": 0.9658603076331366,
+   "exact_board_rate": 0.3395,
+   "precision": 0.950951871882188,
+   "recall": 0.9846760651964114
+  },
+  "reconstruction_t": 0.4,
+  "per_threshold": {
+   "0.0": {
+    "coverage_test": 0.9703584909439087,
+    "reconstruction_train": {
+     "f1": 0.9265673649060508,
+     "exact_board_rate": 0.048525521068593924,
+     "precision": 0.8797342945941511,
+     "recall": 0.98300640934541
+    },
+    "reconstruction_test": {
+     "f1": 0.8974130875105529,
+     "exact_board_rate": 0.016,
+     "precision": 0.8332282994190038,
+     "recall": 0.9812334844518318
+    },
+    "n_assigned_pairs": 34641
+   },
+   "0.1": {
+    "coverage_test": 0.9768059849739075,
+    "reconstruction_train": {
+     "f1": 0.9406831689627722,
+     "exact_board_rate": 0.08679099180486546,
+     "precision": 0.8958116291269433,
+     "recall": 0.9939208321669978
+    },
+    "reconstruction_test": {
+     "f1": 0.9124335277988018,
+     "exact_board_rate": 0.0305,
+     "precision": 0.8501170246725539,
+     "recall": 0.9931738332682353
+    },
+    "n_assigned_pairs": 35793
+   },
+   "0.2": {
+    "coverage_test": 0.971976101398468,
+    "reconstruction_train": {
+     "f1": 0.9676384753017716,
+     "exact_board_rate": 0.2619216622572111,
+     "precision": 0.9410566567936239,
+     "recall": 0.997702253318251
+    },
+    "reconstruction_test": {
+     "f1": 0.9404223833275531,
+     "exact_board_rate": 0.1165,
+     "precision": 0.8946283386461447,
+     "recall": 0.9976950217591357
+    },
+    "n_assigned_pairs": 39934
+   },
+   "0.3": {
+    "coverage_test": 0.9494165778160095,
+    "reconstruction_train": {
+     "f1": 0.9848579511910562,
+     "exact_board_rate": 0.5248757824094986,
+     "precision": 0.9744035770729182,
+     "recall": 0.9963739861591059
+    },
+    "reconstruction_test": {
+     "f1": 0.9606210605321914,
+     "exact_board_rate": 0.27,
+     "precision": 0.9315050408825138,
+     "recall": 0.9960846635758107
+    },
+    "n_assigned_pairs": 41705
+   },
+   "0.4": {
+    "coverage_test": 0.8965097069740295,
+    "reconstruction_train": {
+     "f1": 0.988486711132869,
+     "exact_board_rate": 0.6303155449441827,
+     "precision": 0.9908172940469436,
+     "recall": 0.986819543508967
+    },
+    "reconstruction_test": {
+     "f1": 0.9658603076331366,
+     "exact_board_rate": 0.3395,
+     "precision": 0.950951871882188,
+     "recall": 0.9846760651964114
+    },
+    "n_assigned_pairs": 40401
+   },
+   "0.5": {
+    "coverage_test": 0.7961599230766296,
+    "reconstruction_train": {
+     "f1": 0.9579530154400002,
+     "exact_board_rate": 0.22494676388978513,
+     "precision": 0.9965290918415177,
+     "recall": 0.9248862985099359
+    },
+    "reconstruction_test": {
+     "f1": 0.9362817052150557,
+     "exact_board_rate": 0.1415,
+     "precision": 0.9592104575731936,
+     "recall": 0.9182298266001842
+    },
+    "n_assigned_pairs": 36682
+   },
+   "0.6": {
+    "coverage_test": 0.6292670965194702,
+    "reconstruction_train": {
+     "f1": 0.8336360156933489,
+     "exact_board_rate": 0.016325740465896625,
+     "precision": 0.998879034750781,
+     "recall": 0.7239218152257804
+    },
+    "reconstruction_test": {
+     "f1": 0.8099573721793324,
+     "exact_board_rate": 0.0035,
+     "precision": 0.964526874381565,
+     "recall": 0.7071944586750787
+    },
+    "n_assigned_pairs": 30268
+   },
+   "0.7": {
+    "coverage_test": 0.40631186962127686,
+    "reconstruction_train": {
+     "f1": 0.5624299852749498,
+     "exact_board_rate": 0.002645673356133445,
+     "precision": 0.9984601737883783,
+     "recall": 0.40303830533687957
+    },
+    "reconstruction_test": {
+     "f1": 0.5331968439402586,
+     "exact_board_rate": 0.0,
+     "precision": 0.9620825390704068,
+     "recall": 0.3796797301299755
+    },
+    "n_assigned_pairs": 22036
+   },
+   "0.8": {
+    "coverage_test": 0.1823747754096985,
+    "reconstruction_train": {
+     "f1": 0.2315780314975027,
+     "exact_board_rate": 0.0005162289475382332,
+     "precision": 0.9244056453322763,
+     "recall": 0.1381889055727649
+    },
+    "reconstruction_test": {
+     "f1": 0.19402819562850682,
+     "exact_board_rate": 0.0,
+     "precision": 0.8562095238095239,
+     "recall": 0.11320902592741464
+    },
+    "n_assigned_pairs": 13124
+   },
+   "0.9": {
+    "coverage_test": 0.06163540482521057,
+    "reconstruction_train": {
+     "f1": 0.05867286691055117,
+     "exact_board_rate": 0.0,
+     "precision": 0.46680002581144736,
+     "recall": 0.03247344127092271
+    },
+    "reconstruction_test": {
+     "f1": 0.032878445172075124,
+     "exact_board_rate": 0.0,
+     "precision": 0.314125,
+     "recall": 0.017606254555193716
+    },
+    "n_assigned_pairs": 6097
+   }
+  },
+  "strategy_coverage": {
+   "legal_moves": 0.4931262731552124,
+   "threatened_squares": 0.6247105598449707,
+   "check": 0.9661016949152542,
+   "can_check": 0.6641221374045801,
+   "queen": 0.9850349185234453,
+   "pin": 0.46111111111111114,
+   "own_can_castle_kingside": 0.9604395604395605,
+   "own_can_castle_queenside": 0.9568106312292359,
+   "enemy_can_castle_kingside": 0.8910179640718563,
+   "enemy_can_castle_queenside": 0.8728606356968215,
+   "bishop_pair": 0.8044397463002114,
+   "mean": 0.7890704756992963
+  },
+  "min_fires_5": {
+   "reconstruction": {
+    "f1": 0.9805567103628211,
+    "exact_board_rate": 0.484,
+    "precision": 0.982192416404028,
+    "recall": 0.98013488148385
+   },
+   "reconstruction_t": 0.4
+  },
+  "linear_probe": {
+   "f1": 0.993097683510409,
+   "exact_board_rate": 0.8586666666666667,
+   "precision": 0.9917662683345485,
+   "recall": 0.9955520532773537
+  },
+  "layer": 11,
+  "random_weights": null
+ },
+ "L7_baseline_v0": {
+  "coverage": 0.9836816787719727,
+  "coverage_t": 0.2,
+  "coverage_per_piece": {
+   "own_pawn": 0.9303867816925049,
+   "own_knight": 0.981373131275177,
+   "own_bishop": 0.9913942813873291,
+   "own_rook": 0.992836058139801,
+   "own_queen": 0.9843276143074036,
+   "own_king": 0.9995326399803162,
+   "enemy_pawn": 0.9962055683135986,
+   "enemy_knight": 0.970391571521759,
+   "enemy_bishop": 0.9853049516677856,
+   "enemy_rook": 0.9769527912139893,
+   "enemy_queen": 0.9920101761817932,
+   "enemy_king": 0.9998529553413391
+  },
+  "reconstruction": {
+   "f1": 0.9533655969858644,
+   "exact_board_rate": 0.3245,
+   "precision": 0.9254720806583124,
+   "recall": 0.9913358141047164
+  },
+  "reconstruction_t": 0.4,
+  "per_threshold": {
+   "0.0": {
+    "coverage_test": 0.9347912669181824,
+    "reconstruction_train": {
+     "f1": 0.8785030864968197,
+     "exact_board_rate": 0.025359747047815705,
+     "precision": 0.8537118139652005,
+     "recall": 0.912550386714984
+    },
+    "reconstruction_test": {
+     "f1": 0.8516978266862026,
+     "exact_board_rate": 0.0125,
+     "precision": 0.816733779261592,
+     "recall": 0.9007520393701578
+    },
+    "n_assigned_pairs": 28375
+   },
+   "0.1": {
+    "coverage_test": 0.9558230638504028,
+    "reconstruction_train": {
+     "f1": 0.8974217020169223,
+     "exact_board_rate": 0.038588113828482935,
+     "precision": 0.865744223528597,
+     "recall": 0.9389115613672007
+    },
+    "reconstruction_test": {
+     "f1": 0.8712382626787704,
+     "exact_board_rate": 0.03,
+     "precision": 0.8281593375746589,
+     "recall": 0.9305121574857764
+    },
+    "n_assigned_pairs": 28967
+   },
+   "0.2": {
+    "coverage_test": 0.9836816787719727,
+    "reconstruction_train": {
+     "f1": 0.9603602430796572,
+     "exact_board_rate": 0.23204491191843582,
+     "precision": 0.9296584016794245,
+     "recall": 0.9971005017018274
+    },
+    "reconstruction_test": {
+     "f1": 0.9291013305561033,
+     "exact_board_rate": 0.108,
+     "precision": 0.8804338500271313,
+     "recall": 0.99642503223473
+    },
+    "n_assigned_pairs": 34739
+   },
+   "0.3": {
+    "coverage_test": 0.962641716003418,
+    "reconstruction_train": {
+     "f1": 0.9825652175502648,
+     "exact_board_rate": 0.5289410853713622,
+     "precision": 0.9686750977992024,
+     "recall": 0.9982913765978486
+    },
+    "reconstruction_test": {
+     "f1": 0.9474559218978118,
+     "exact_board_rate": 0.2345,
+     "precision": 0.9102311071889847,
+     "recall": 0.997945879586272
+    },
+    "n_assigned_pairs": 39009
+   },
+   "0.4": {
+    "coverage_test": 0.9171528220176697,
+    "reconstruction_train": {
+     "f1": 0.9891070668952602,
+     "exact_board_rate": 0.6776795508808157,
+     "precision": 0.9861871254599546,
+     "recall": 0.9927764049947988
+    },
+    "reconstruction_test": {
+     "f1": 0.9533655969858644,
+     "exact_board_rate": 0.3245,
+     "precision": 0.9254720806583124,
+     "recall": 0.9913358141047164
+    },
+    "n_assigned_pairs": 40572
+   },
+   "0.5": {
+    "coverage_test": 0.8159587383270264,
+    "reconstruction_train": {
+     "f1": 0.9672008209199205,
+     "exact_board_rate": 0.317609859972898,
+     "precision": 0.9951876452692698,
+     "recall": 0.943240070352868
+    },
+    "reconstruction_test": {
+     "f1": 0.9308494070371093,
+     "exact_board_rate": 0.166,
+     "precision": 0.9330527453340576,
+     "recall": 0.9359309196329064
+    },
+    "n_assigned_pairs": 40532
+   },
+   "0.6": {
+    "coverage_test": 0.648463249206543,
+    "reconstruction_train": {
+     "f1": 0.852027926066539,
+     "exact_board_rate": 0.0244563463896238,
+     "precision": 0.9986435832003394,
+     "recall": 0.7531893645455283
+    },
+    "reconstruction_test": {
+     "f1": 0.8118092381040314,
+     "exact_board_rate": 0.0025,
+     "precision": 0.938005258507875,
+     "recall": 0.7280814829064691
+    },
+    "n_assigned_pairs": 36949
+   },
+   "0.7": {
+    "coverage_test": 0.4099235236644745,
+    "reconstruction_train": {
+     "f1": 0.578004399215886,
+     "exact_board_rate": 0.004839646383170936,
+     "precision": 0.9973152653805055,
+     "recall": 0.422488814424654
+    },
+    "reconstruction_test": {
+     "f1": 0.5260770948297424,
+     "exact_board_rate": 0.0,
+     "precision": 0.936860341791739,
+     "recall": 0.3800005188199823
+    },
+    "n_assigned_pairs": 27646
+   },
+   "0.8": {
+    "coverage_test": 0.1893775910139084,
+    "reconstruction_train": {
+     "f1": 0.24512363529747755,
+     "exact_board_rate": 0.0007743434213073498,
+     "precision": 0.9209607901580541,
+     "recall": 0.1498708438963846
+    },
+    "reconstruction_test": {
+     "f1": 0.18834318092141297,
+     "exact_board_rate": 0.0,
+     "precision": 0.8218906565656566,
+     "recall": 0.11051258912910385
+    },
+    "n_assigned_pairs": 15969
+   },
+   "0.9": {
+    "coverage_test": 0.06778070330619812,
+    "reconstruction_train": {
+     "f1": 0.06084787380802222,
+     "exact_board_rate": 0.0001290572368845583,
+     "precision": 0.4138220300703362,
+     "recall": 0.03561664814459317
+    },
+    "reconstruction_test": {
+     "f1": 0.023968787904965504,
+     "exact_board_rate": 0.0,
+     "precision": 0.24208333333333332,
+     "recall": 0.01287973095092406
+    },
+    "n_assigned_pairs": 7076
+   }
+  },
+  "strategy_coverage": {
+   "legal_moves": 0.5802148580551147,
+   "threatened_squares": 0.6034612059593201,
+   "check": 0.44635193133047213,
+   "can_check": 0.6645161290322581,
+   "queen": 0.9837263367651943,
+   "pin": 0.42953020134228187,
+   "own_can_castle_kingside": 0.9717514124293786,
+   "own_can_castle_queenside": 0.9635535307517085,
+   "enemy_can_castle_kingside": 0.9015256588072122,
+   "enemy_can_castle_queenside": 0.8863636363636364,
+   "bishop_pair": 0.789159891598916,
+   "mean": 0.7472867993123175
+  },
+  "min_fires_5": {
+   "reconstruction": {
+    "f1": 0.9807254949704372,
+    "exact_board_rate": 0.566,
+    "precision": 0.9755021702093652,
+    "recall": 0.9876756038776119
+   },
+   "reconstruction_t": 0.4
+  },
+  "linear_probe": {
+   "f1": 0.9932344012550681,
+   "exact_board_rate": 0.8906666666666667,
+   "precision": 0.991642603732856,
+   "recall": 0.9962357350919326
+  },
+  "layer": 7,
+  "random_weights": null
+ },
+ "L7_randnet": {
+  "coverage": 0.3135017454624176,
+  "coverage_t": 0.0,
+  "coverage_per_piece": {
+   "own_pawn": 0.3132520616054535,
+   "own_knight": 0.3079950511455536,
+   "own_bishop": 0.29589855670928955,
+   "own_rook": 0.3225254416465759,
+   "own_queen": 0.32154664397239685,
+   "own_king": 0.37083837389945984,
+   "enemy_pawn": 0.31961965560913086,
+   "enemy_knight": 0.31039807200431824,
+   "enemy_bishop": 0.28610846400260925,
+   "enemy_rook": 0.3162304759025574,
+   "enemy_queen": 0.2755911946296692,
+   "enemy_king": 0.34018418192863464
+  },
+  "reconstruction": {
+   "f1": 0.08594045405948132,
+   "exact_board_rate": 0.0,
+   "precision": 0.13759236605040023,
+   "recall": 0.08040983291038034
+  },
+  "reconstruction_t": 0.9,
+  "per_threshold": {
+   "0.0": {
+    "coverage_test": 0.3135017454624176,
+    "reconstruction_train": {
+     "f1": 0.16554966892513934,
+     "exact_board_rate": 0.01135703684584113,
+     "precision": 0.4553306448554832,
+     "recall": 0.11700694505242723
+    },
+    "reconstruction_test": {
+     "f1": 0.1280747785914666,
+     "exact_board_rate": 0.0,
+     "precision": 0.33996836702367306,
+     "recall": 0.08995474302839188
+    },
+    "n_assigned_pairs": 18455
+   },
+   "0.1": {
+    "coverage_test": 0.31335896253585815,
+    "reconstruction_train": {
+     "f1": 0.16554966892513934,
+     "exact_board_rate": 0.01135703684584113,
+     "precision": 0.4553306448554832,
+     "recall": 0.11700694505242723
+    },
+    "reconstruction_test": {
+     "f1": 0.1280747785914666,
+     "exact_board_rate": 0.0,
+     "precision": 0.33996836702367306,
+     "recall": 0.08995474302839188
+    },
+    "n_assigned_pairs": 18455
+   },
+   "0.2": {
+    "coverage_test": 0.31092527508735657,
+    "reconstruction_train": {
+     "f1": 0.16557196393323367,
+     "exact_board_rate": 0.01135703684584113,
+     "precision": 0.4553952975674225,
+     "recall": 0.1170204916910768
+    },
+    "reconstruction_test": {
+     "f1": 0.12807074930768356,
+     "exact_board_rate": 0.0,
+     "precision": 0.34046598607129214,
+     "recall": 0.08994006575164565
+    },
+    "n_assigned_pairs": 18469
+   },
+   "0.3": {
+    "coverage_test": 0.3066770136356354,
+    "reconstruction_train": {
+     "f1": 0.16419154028489877,
+     "exact_board_rate": 0.011615151319610247,
+     "precision": 0.45552654046400437,
+     "recall": 0.1158669418577917
+    },
+    "reconstruction_test": {
+     "f1": 0.12666507326312815,
+     "exact_board_rate": 0.0,
+     "precision": 0.34205352652734444,
+     "recall": 0.08870055445687504
+    },
+    "n_assigned_pairs": 18480
+   },
+   "0.4": {
+    "coverage_test": 0.3004566729068756,
+    "reconstruction_train": {
+     "f1": 0.16382920262448097,
+     "exact_board_rate": 0.01148609408272569,
+     "precision": 0.4583722277750172,
+     "recall": 0.11530886866985111
+    },
+    "reconstruction_test": {
+     "f1": 0.12704503400286452,
+     "exact_board_rate": 0.0,
+     "precision": 0.34792307801942607,
+     "recall": 0.08878272732466023
+    },
+    "n_assigned_pairs": 18570
+   },
+   "0.5": {
+    "coverage_test": 0.29494333267211914,
+    "reconstruction_train": {
+     "f1": 0.16001112530363845,
+     "exact_board_rate": 0.012131380267148481,
+     "precision": 0.4499667587003158,
+     "recall": 0.11309520687688969
+    },
+    "reconstruction_test": {
+     "f1": 0.1212541943392761,
+     "exact_board_rate": 0.0,
+     "precision": 0.3301646815112348,
+     "recall": 0.08537089402054636
+    },
+    "n_assigned_pairs": 18977
+   },
+   "0.6": {
+    "coverage_test": 0.2829856276512146,
+    "reconstruction_train": {
+     "f1": 0.15809413670198808,
+     "exact_board_rate": 0.0136155384913209,
+     "precision": 0.44874255046523664,
+     "recall": 0.11229779059831099
+    },
+    "reconstruction_test": {
+     "f1": 0.11346589411937338,
+     "exact_board_rate": 0.0,
+     "precision": 0.31259466636209404,
+     "recall": 0.08097875322791243
+    },
+    "n_assigned_pairs": 20754
+   },
+   "0.7": {
+    "coverage_test": 0.2669229507446289,
+    "reconstruction_train": {
+     "f1": 0.16964189666966875,
+     "exact_board_rate": 0.021100858230625283,
+     "precision": 0.45752824863165004,
+     "recall": 0.12421650957515762
+    },
+    "reconstruction_test": {
+     "f1": 0.10918939822934659,
+     "exact_board_rate": 0.0,
+     "precision": 0.28589444089733257,
+     "recall": 0.08135430465375568
+    },
+    "n_assigned_pairs": 26946
+   },
+   "0.8": {
+    "coverage_test": 0.2391657829284668,
+    "reconstruction_train": {
+     "f1": 0.19418743428597454,
+     "exact_board_rate": 0.04723494869974834,
+     "precision": 0.4310555564364422,
+     "recall": 0.15322378507037004
+    },
+    "reconstruction_test": {
+     "f1": 0.10098675904150187,
+     "exact_board_rate": 0.0,
+     "precision": 0.2137799413676615,
+     "recall": 0.08149771949348726
+    },
+    "n_assigned_pairs": 43433
+   },
+   "0.9": {
+    "coverage_test": 0.19911430776119232,
+    "reconstruction_train": {
+     "f1": 0.22699689951599053,
+     "exact_board_rate": 0.11337678260308447,
+     "precision": 0.35858553268374527,
+     "recall": 0.20045310261638755
+    },
+    "reconstruction_test": {
+     "f1": 0.08594045405948132,
+     "exact_board_rate": 0.0,
+     "precision": 0.13759236605040023,
+     "recall": 0.08040983291038034
+    },
+    "n_assigned_pairs": 75597
+   }
+  },
+  "strategy_coverage": {
+   "legal_moves": 0.4160691797733307,
+   "threatened_squares": 0.21640552580356598,
+   "check": 0.16835016835016836,
+   "can_check": 0.5296316070475173,
+   "queen": 0.6331914893617021,
+   "pin": 0.2861491628614916,
+   "own_can_castle_kingside": 0.633788037775446,
+   "own_can_castle_queenside": 0.642706131078224,
+   "enemy_can_castle_kingside": 0.769433465085639,
+   "enemy_can_castle_queenside": 0.7897574123989218,
+   "bishop_pair": 0.6370106761565836,
+   "mean": 0.520226623244781
+  },
+  "min_fires_5": {
+   "reconstruction": {
+    "f1": 0.0981806924373505,
+    "exact_board_rate": 0.0,
+    "precision": 0.3114688096625597,
+    "recall": 0.06352914834447321
+   },
+   "reconstruction_t": 0.0
+  },
+  "linear_probe": {
+   "f1": 0.0011286777637390423,
+   "exact_board_rate": 0.0,
+   "precision": 0.0009410566079657944,
+   "recall": 0.0015183594358734607
+  },
+  "layer": 7,
+  "random_weights": 0
+ },
+ "L7_freshnet": {
+  "coverage": 0.9951014518737793,
+  "coverage_t": 0.1,
+  "coverage_per_piece": {
+   "own_pawn": 0.997462809085846,
+   "own_knight": 0.984989583492279,
+   "own_bishop": 0.9883922934532166,
+   "own_rook": 0.9997751116752625,
+   "own_queen": 0.9993067383766174,
+   "own_king": 0.9946482181549072,
+   "enemy_pawn": 0.9909002184867859,
+   "enemy_knight": 0.9976274371147156,
+   "enemy_bishop": 0.9987356662750244,
+   "enemy_rook": 0.9903955459594727,
+   "enemy_queen": 0.9999153017997742,
+   "enemy_king": 0.9980581402778625
+  },
+  "reconstruction": {
+   "f1": 0.9778309318090653,
+   "exact_board_rate": 0.468,
+   "precision": 0.9712747750548756,
+   "recall": 0.9859440908212554
+  },
+  "reconstruction_t": 0.2,
+  "per_threshold": {
+   "0.0": {
+    "coverage_test": 0.9849522709846497,
+    "reconstruction_train": {
+     "f1": 0.7993898836268993,
+     "exact_board_rate": 0.01064722204297606,
+     "precision": 0.9601769923190371,
+     "recall": 0.693962647133945
+    },
+    "reconstruction_test": {
+     "f1": 0.7875992568688039,
+     "exact_board_rate": 0.0095,
+     "precision": 0.945320408054778,
+     "recall": 0.6844891728392299
+    },
+    "n_assigned_pairs": 22681
+   },
+   "0.1": {
+    "coverage_test": 0.9951014518737793,
+    "reconstruction_train": {
+     "f1": 0.9433033318960239,
+     "exact_board_rate": 0.09072723752984449,
+     "precision": 0.974442737022217,
+     "recall": 0.9168935900105576
+    },
+    "reconstruction_test": {
+     "f1": 0.941459546171183,
+     "exact_board_rate": 0.0785,
+     "precision": 0.9728772041077441,
+     "recall": 0.9148653225214042
+    },
+    "n_assigned_pairs": 6824
+   },
+   "0.2": {
+    "coverage_test": 0.991437554359436,
+    "reconstruction_train": {
+     "f1": 0.9770933919784323,
+     "exact_board_rate": 0.47460798864296316,
+     "precision": 0.9717793047797375,
+     "recall": 0.9850601239178916
+    },
+    "reconstruction_test": {
+     "f1": 0.9778309318090653,
+     "exact_board_rate": 0.468,
+     "precision": 0.9712747750548756,
+     "recall": 0.9859440908212554
+    },
+    "n_assigned_pairs": 3873
+   },
+   "0.3": {
+    "coverage_test": 0.9859562516212463,
+    "reconstruction_train": {
+     "f1": 0.9713644646260249,
+     "exact_board_rate": 0.5168097051042138,
+     "precision": 0.9672935897765339,
+     "recall": 0.9803684206063825
+    },
+    "reconstruction_test": {
+     "f1": 0.9757257340178137,
+     "exact_board_rate": 0.519,
+     "precision": 0.9703242979028773,
+     "recall": 0.9841870425659026
+    },
+    "n_assigned_pairs": 3608
+   },
+   "0.4": {
+    "coverage_test": 0.968244194984436,
+    "reconstruction_train": {
+     "f1": 0.9594333478454756,
+     "exact_board_rate": 0.7139446344453765,
+     "precision": 0.9677725939771921,
+     "recall": 0.9624107675507014
+    },
+    "reconstruction_test": {
+     "f1": 0.9634873365410194,
+     "exact_board_rate": 0.7005,
+     "precision": 0.9717287429288033,
+     "recall": 0.966603944732465
+    },
+    "n_assigned_pairs": 3433
+   },
+   "0.5": {
+    "coverage_test": 0.9444453716278076,
+    "reconstruction_train": {
+     "f1": 0.9279638387753871,
+     "exact_board_rate": 0.7108472607601471,
+     "precision": 0.9504330653965554,
+     "recall": 0.9252484212164236
+    },
+    "reconstruction_test": {
+     "f1": 0.9313530631413723,
+     "exact_board_rate": 0.707,
+     "precision": 0.9549851211253886,
+     "recall": 0.9292059376681933
+    },
+    "n_assigned_pairs": 3263
+   },
+   "0.6": {
+    "coverage_test": 0.9122050404548645,
+    "reconstruction_train": {
+     "f1": 0.884561367384696,
+     "exact_board_rate": 0.6641285410079371,
+     "precision": 0.9467853025927451,
+     "recall": 0.8762471566478282
+    },
+    "reconstruction_test": {
+     "f1": 0.8888099427202469,
+     "exact_board_rate": 0.6595,
+     "precision": 0.9568787051408858,
+     "recall": 0.8802001463228444
+    },
+    "n_assigned_pairs": 3106
+   },
+   "0.7": {
+    "coverage_test": 0.8548375368118286,
+    "reconstruction_train": {
+     "f1": 0.80892674414646,
+     "exact_board_rate": 0.5381041491901658,
+     "precision": 0.8772130514541564,
+     "recall": 0.7917572911261872
+    },
+    "reconstruction_test": {
+     "f1": 0.8075575685644675,
+     "exact_board_rate": 0.525,
+     "precision": 0.8774984684848013,
+     "recall": 0.7894360944459112
+    },
+    "n_assigned_pairs": 2973
+   },
+   "0.8": {
+    "coverage_test": 0.7790693640708923,
+    "reconstruction_train": {
+     "f1": 0.6719649770035807,
+     "exact_board_rate": 0.22772149448280313,
+     "precision": 0.7884691776291876,
+     "recall": 0.6282799827312651
+    },
+    "reconstruction_test": {
+     "f1": 0.6662672166483493,
+     "exact_board_rate": 0.2145,
+     "precision": 0.7874407595436896,
+     "recall": 0.6211309000126476
+    },
+    "n_assigned_pairs": 2867
+   },
+   "0.9": {
+    "coverage_test": 0.5894535779953003,
+    "reconstruction_train": {
+     "f1": 0.38415324904957937,
+     "exact_board_rate": 0.026069561850680777,
+     "precision": 0.6807822000515373,
+     "recall": 0.31455718563378426
+    },
+    "reconstruction_test": {
+     "f1": 0.37200887652434605,
+     "exact_board_rate": 0.0155,
+     "precision": 0.6591064117642527,
+     "recall": 0.30290283562884746
+    },
+    "n_assigned_pairs": 2723
+   }
+  },
+  "strategy_coverage": {
+   "legal_moves": 0.5562011003494263,
+   "threatened_squares": 0.4484556019306183,
+   "check": 0.1893491124260355,
+   "can_check": 0.6433260393873085,
+   "queen": 0.8696151636990236,
+   "pin": 0.33205128205128204,
+   "own_can_castle_kingside": 1.0,
+   "own_can_castle_queenside": 1.0,
+   "enemy_can_castle_kingside": 0.9987163029525032,
+   "enemy_can_castle_queenside": 1.0,
+   "bishop_pair": 0.7189934092270821,
+   "mean": 0.7051552738202982
+  },
+  "min_fires_5": {
+   "reconstruction": {
+    "f1": 0.9780534950304101,
+    "exact_board_rate": 0.4705,
+    "precision": 0.9718936455459629,
+    "recall": 0.9857347344469534
+   },
+   "reconstruction_t": 0.2
+  },
+  "linear_probe": {
+   "f1": 0.9788495855152285,
+   "exact_board_rate": 0.7113333333333334,
+   "precision": 0.9898948106965708,
+   "recall": 0.9715056074029762
+  },
+  "layer": 7,
+  "random_weights": 0,
+  "random_init": "fresh"
+ }
+}

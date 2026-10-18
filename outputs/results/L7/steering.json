@@ -1,0 +1,106 @@
+{
+ "enemy_hanging": {
+  "feature": 5123,
+  "p90_activation": 1.0465599298477173,
+  "n_trials": 300,
+  "n_control_pool": 19,
+  "x1": {
+   "target_dlogp_median": 0.01365804672241211,
+   "control_target_dlogp_median": 0.0006622299551963806,
+   "raises_more_than_control": 0.7766666412353516,
+   "random_direction_target_dlogp_median": 0.00011587142944335938,
+   "raises_more_than_random_direction": 0.7633333206176758,
+   "frac_raised": 0.8066666722297668,
+   "kl_median": 0.000312259653583169,
+   "control_kl_median": 5.876366049051285e-05
+  },
+  "x3": {
+   "target_dlogp_median": 0.060882568359375,
+   "control_target_dlogp_median": 0.002365589141845703,
+   "raises_more_than_control": 0.7633333206176758,
+   "random_direction_target_dlogp_median": 0.0007548332214355469,
+   "raises_more_than_random_direction": 0.7900000214576721,
+   "frac_raised": 0.7766666412353516,
+   "kl_median": 0.0033068275079131126,
+   "control_kl_median": 0.0005724881775677204
+  }
+ },
+ "own_hanging": {
+  "feature": 5424,
+  "p90_activation": 0.8522523045539856,
+  "n_trials": 300,
+  "n_control_pool": 49,
+  "x1": {
+   "target_dlogp_median": 0.0012737512588500977,
+   "control_target_dlogp_median": -0.0015884041786193848,
+   "raises_more_than_control": 0.6033333539962769,
+   "random_direction_target_dlogp_median": -0.0001099705696105957,
+   "raises_more_than_random_direction": 0.5699999928474426,
+   "frac_raised": 0.5400000214576721,
+   "kl_median": 0.0002994248643517494,
+   "control_kl_median": 5.2634626626968384e-05
+  },
+  "x3": {
+   "target_dlogp_median": 0.004940599203109741,
+   "control_target_dlogp_median": -0.004752159118652344,
+   "raises_more_than_control": 0.6133333444595337,
+   "random_direction_target_dlogp_median": -0.0009953677654266357,
+   "raises_more_than_random_direction": 0.5699999928474426,
+   "frac_raised": 0.550000011920929,
+   "kl_median": 0.004878910258412361,
+   "control_kl_median": 0.000518525019288063
+  }
+ },
+ "own_passed_pawn": {
+  "feature": 1581,
+  "p90_activation": 0.8036124110221863,
+  "n_trials": 300,
+  "n_control_pool": 69,
+  "x1": {
+   "target_dlogp_median": -0.0026674270629882812,
+   "control_target_dlogp_median": -0.0010499954223632812,
+   "raises_more_than_control": 0.44999998807907104,
+   "random_direction_target_dlogp_median": 0.000347137451171875,
+   "raises_more_than_random_direction": 0.3799999952316284,
+   "frac_raised": 0.3499999940395355,
+   "kl_median": 5.1652779802680016e-05,
+   "control_kl_median": 1.3390323147177696e-05
+  },
+  "x3": {
+   "target_dlogp_median": -0.012011051177978516,
+   "control_target_dlogp_median": -0.0029611587524414062,
+   "raises_more_than_control": 0.4466666579246521,
+   "random_direction_target_dlogp_median": -4.38690185546875e-05,
+   "raises_more_than_random_direction": 0.3466666638851166,
+   "frac_raised": 0.3199999928474426,
+   "kl_median": 0.0006426213076338172,
+   "control_kl_median": 0.0001470543211326003
+  }
+ },
+ "own_king_in_check": {
+  "feature": 277,
+  "p90_activation": 1.4604130983352661,
+  "n_trials": 300,
+  "n_control_pool": 2,
+  "x1": {
+   "target_dlogp_median": 0.03686416149139404,
+   "control_target_dlogp_median": -0.0015316009521484375,
+   "raises_more_than_control": 0.8666666746139526,
+   "random_direction_target_dlogp_median": 0.0012917518615722656,
+   "raises_more_than_random_direction": 0.8399999737739563,
+   "frac_raised": 0.8733333349227905,
+   "kl_median": 0.00039373990148305893,
+   "control_kl_median": 9.084632620215416e-05
+  },
+  "x3": {
+   "target_dlogp_median": 0.3842754364013672,
+   "control_target_dlogp_median": -0.00521087646484375,
+   "raises_more_than_control": 0.9366666674613953,
+   "random_direction_target_dlogp_median": 0.0109100341796875,
+   "raises_more_than_random_direction": 0.9399999976158142,
+   "frac_raised": 0.9466666579246521,
+   "kl_median": 0.01720064878463745,
+   "control_kl_median": 0.0029866378754377365
+  }
+ }
+}

@@ -1,0 +1,238 @@
+{
+ "n_identity_features_excluded": 356,
+ "own_king_in_check": {
+  "n_boards": 128,
+  "top_features": [
+   277,
+   737,
+   1445,
+   2150,
+   3679,
+   3491,
+   4318,
+   2216,
+   805,
+   1475
+  ],
+  "top1": {
+   "kl_median": 0.0,
+   "control_kl_median": 0.0,
+   "kl_win_rate": 0.4609375,
+   "target_dlogp_median": 0.0,
+   "control_target_dlogp_median": 0.0,
+   "n_target_boards": 77
+  },
+  "top3": {
+   "kl_median": 0.0014815954491496086,
+   "control_kl_median": 6.699003279209137e-06,
+   "kl_win_rate": 0.8125,
+   "target_dlogp_median": -0.040606677532196045,
+   "control_target_dlogp_median": -3.207847476005554e-05,
+   "n_target_boards": 77
+  },
+  "top10": {
+   "kl_median": 0.002018490806221962,
+   "control_kl_median": 1.5006226021796465e-05,
+   "kl_win_rate": 0.8203125,
+   "target_dlogp_median": -0.04647165536880493,
+   "control_target_dlogp_median": -9.41157341003418e-05,
+   "n_target_boards": 77
+  },
+  "top30": {
+   "kl_median": 0.0023208539932966232,
+   "control_kl_median": 7.16641079634428e-05,
+   "kl_win_rate": 0.7109375,
+   "target_dlogp_median": -0.026458054780960083,
+   "control_target_dlogp_median": 9.956955909729004e-05,
+   "n_target_boards": 77
+  }
+ },
+ "enemy_hanging": {
+  "n_boards": 128,
+  "top_features": [
+   5123,
+   5423,
+   1316,
+   6135,
+   1609,
+   1414,
+   3504,
+   490,
+   4810,
+   2289
+  ],
+  "top1": {
+   "kl_median": 2.521162969060242e-06,
+   "control_kl_median": 2.1898813429288566e-07,
+   "kl_win_rate": 0.4921875,
+   "target_dlogp_median": -0.0004258155822753906,
+   "control_target_dlogp_median": 0.0,
+   "n_target_boards": 109
+  },
+  "top3": {
+   "kl_median": 0.00013866182416677475,
+   "control_kl_median": 4.055153112858534e-06,
+   "kl_win_rate": 0.75,
+   "target_dlogp_median": -0.005002886056900024,
+   "control_target_dlogp_median": 5.2191317081451416e-05,
+   "n_target_boards": 109
+  },
+  "top10": {
+   "kl_median": 0.0015135975554585457,
+   "control_kl_median": 1.0046642273664474e-05,
+   "kl_win_rate": 0.8515625,
+   "target_dlogp_median": -0.07225322723388672,
+   "control_target_dlogp_median": 0.00020426511764526367,
+   "n_target_boards": 109
+  },
+  "top30": {
+   "kl_median": 0.01218535378575325,
+   "control_kl_median": 0.00013762922026216984,
+   "kl_win_rate": 0.875,
+   "target_dlogp_median": -0.21668830513954163,
+   "control_target_dlogp_median": 0.00014659017324447632,
+   "n_target_boards": 109
+  }
+ },
+ "own_pinned": {
+  "n_boards": 128,
+  "top_features": [
+   3918,
+   5349,
+   816,
+   4827,
+   2938,
+   1248,
+   3296,
+   1009,
+   5763,
+   4042
+  ],
+  "top1": {
+   "kl_median": 5.345791578292847e-07,
+   "control_kl_median": 6.546542863361537e-07,
+   "kl_win_rate": 0.390625,
+   "target_dlogp_median": 0.0,
+   "control_target_dlogp_median": 0.0,
+   "n_target_boards": 41
+  },
+  "top3": {
+   "kl_median": 4.3148407712578773e-05,
+   "control_kl_median": 7.890688721090555e-06,
+   "kl_win_rate": 0.515625,
+   "target_dlogp_median": 0.0,
+   "control_target_dlogp_median": 0.0,
+   "n_target_boards": 41
+  },
+  "top10": {
+   "kl_median": 0.00044471086584962904,
+   "control_kl_median": 0.00014672358520328999,
+   "kl_win_rate": 0.703125,
+   "target_dlogp_median": 0.023122787475585938,
+   "control_target_dlogp_median": 0.0003147125244140625,
+   "n_target_boards": 41
+  },
+  "top30": {
+   "kl_median": 0.001763195265084505,
+   "control_kl_median": 0.0005830302834510803,
+   "kl_win_rate": 0.71875,
+   "target_dlogp_median": 0.028150320053100586,
+   "control_target_dlogp_median": -0.0003010556101799011,
+   "n_target_boards": 41
+  }
+ },
+ "enemy_passed_pawn": {
+  "n_boards": 128,
+  "top_features": [
+   1542,
+   2602,
+   906,
+   1593,
+   2521,
+   5030,
+   1662,
+   1001,
+   2192,
+   3175
+  ],
+  "top1": {
+   "kl_median": 7.141978130675852e-06,
+   "control_kl_median": 7.141788955777884e-07,
+   "kl_win_rate": 0.5,
+   "target_dlogp_median": 0.0,
+   "control_target_dlogp_median": 0.0,
+   "n_target_boards": 53
+  },
+  "top3": {
+   "kl_median": 0.0001096965279430151,
+   "control_kl_median": 5.811452865600586e-06,
+   "kl_win_rate": 0.71875,
+   "target_dlogp_median": -0.0010469257831573486,
+   "control_target_dlogp_median": -0.00021159648895263672,
+   "n_target_boards": 53
+  },
+  "top10": {
+   "kl_median": 0.00024355528876185417,
+   "control_kl_median": 4.844437353312969e-05,
+   "kl_win_rate": 0.6953125,
+   "target_dlogp_median": -0.00022649765014648438,
+   "control_target_dlogp_median": -0.0009303092956542969,
+   "n_target_boards": 53
+  },
+  "top30": {
+   "kl_median": 0.0007108105346560478,
+   "control_kl_median": 0.00016657612286508083,
+   "kl_win_rate": 0.75,
+   "target_dlogp_median": -0.008285999298095703,
+   "control_target_dlogp_median": -0.0007414817810058594,
+   "n_target_boards": 53
+  }
+ },
+ "own_passed_pawn": {
+  "n_boards": 128,
+  "top_features": [
+   1581,
+   2215,
+   2137,
+   1562,
+   215,
+   1279,
+   695,
+   5271,
+   4364,
+   5424
+  ],
+  "top1": {
+   "kl_median": 8.011498721316457e-06,
+   "control_kl_median": 1.1965748853981495e-06,
+   "kl_win_rate": 0.5,
+   "target_dlogp_median": 0.0,
+   "control_target_dlogp_median": 0.0,
+   "n_target_boards": 94
+  },
+  "top3": {
+   "kl_median": 2.971850335597992e-05,
+   "control_kl_median": 7.269321940839291e-06,
+   "kl_win_rate": 0.578125,
+   "target_dlogp_median": 0.0005540847778320312,
+   "control_target_dlogp_median": 0.0,
+   "n_target_boards": 94
+  },
+  "top10": {
+   "kl_median": 0.00012162001803517342,
+   "control_kl_median": 2.744031371548772e-05,
+   "kl_win_rate": 0.703125,
+   "target_dlogp_median": 0.0,
+   "control_target_dlogp_median": 3.904104232788086e-05,
+   "n_target_boards": 94
+  },
+  "top30": {
+   "kl_median": 0.0005286915693432093,
+   "control_kl_median": 0.0002967114560306072,
+   "kl_win_rate": 0.6171875,
+   "target_dlogp_median": -0.0013718605041503906,
+   "control_target_dlogp_median": 0.003931522369384766,
+   "n_target_boards": 94
+  }
+ }
+}

@@ -1,0 +1,548 @@
+{
+ "own_pawn": {
+  "probe_layer": {
+   "test_f1": 0.998646514775547,
+   "test_precision": 0.9987591652566272,
+   "test_recall": 0.9985338897033946,
+   "test_auroc": 0.9999943283033103
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "own_knight": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "own_bishop": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "own_rook": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "own_queen": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "own_king": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "enemy_pawn": {
+  "probe_layer": {
+   "test_f1": 0.9995533720410897,
+   "test_precision": 0.9992186627971872,
+   "test_recall": 0.9998883055958896,
+   "test_auroc": 0.9999998973479577
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "enemy_knight": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "enemy_bishop": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "enemy_rook": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "enemy_queen": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "enemy_king": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "empty": {
+  "probe_layer": {
+   "test_f1": 0.9992552155373498,
+   "test_precision": 0.9995415397714248,
+   "test_recall": 0.9989690552946374,
+   "test_auroc": 0.9999397520100187
+  },
+  "probe_input": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  }
+ },
+ "attacked_by_own": {
+  "probe_layer": {
+   "test_f1": 0.993479405451379,
+   "test_precision": 0.9935598849690146,
+   "test_recall": 0.9933989389705584,
+   "test_auroc": 0.9996787662375118
+  },
+  "probe_input": {
+   "test_f1": 0.7262526055135017,
+   "test_precision": 0.5923710180498032,
+   "test_recall": 0.9383226015469971,
+   "test_auroc": 0.7045324844116427
+  }
+ },
+ "attacked_by_enemy": {
+  "probe_layer": {
+   "test_f1": 0.9925159586176535,
+   "test_precision": 0.9923173879118901,
+   "test_recall": 0.9927146088105198,
+   "test_auroc": 0.9994604983076838
+  },
+  "probe_input": {
+   "test_f1": 0.7270610481243309,
+   "test_precision": 0.5963367428029429,
+   "test_recall": 0.9311890799191401,
+   "test_auroc": 0.6988252019833948
+  }
+ },
+ "own_hanging": {
+  "probe_layer": {
+   "test_f1": 0.8785276073619632,
+   "test_precision": 0.8994974874371859,
+   "test_recall": 0.8585131894484412,
+   "test_auroc": 0.9997543034590877
+  },
+  "probe_input": {
+   "test_f1": 0.0666194188518781,
+   "test_precision": 0.03908523908523909,
+   "test_recall": 0.22541966426858512,
+   "test_auroc": 0.9354195185015165
+  }
+ },
+ "enemy_hanging": {
+  "probe_layer": {
+   "test_f1": 0.9237668161434978,
+   "test_precision": 0.9251497005988024,
+   "test_recall": 0.9223880597014925,
+   "test_auroc": 0.9999130984912369
+  },
+  "probe_input": {
+   "test_f1": 0.05512679162072767,
+   "test_precision": 0.043706293706293704,
+   "test_recall": 0.07462686567164178,
+   "test_auroc": 0.9396850951431106
+  }
+ },
+ "own_en_prise": {
+  "probe_layer": {
+   "test_f1": 0.9203222918531782,
+   "test_precision": 0.9345454545454546,
+   "test_recall": 0.9065255731922398,
+   "test_auroc": 0.9998260227111883
+  },
+  "probe_input": {
+   "test_f1": 0.11900191938579655,
+   "test_precision": 0.09337349397590361,
+   "test_recall": 0.164021164021164,
+   "test_auroc": 0.9436380207165296
+  }
+ },
+ "enemy_en_prise": {
+  "probe_layer": {
+   "test_f1": 0.9295039164490861,
+   "test_precision": 0.9295039164490861,
+   "test_recall": 0.9295039164490861,
+   "test_auroc": 0.9999352835839219
+  },
+  "probe_input": {
+   "test_f1": 0.07566765578635015,
+   "test_precision": 0.05284974093264249,
+   "test_recall": 0.13315926892950392,
+   "test_auroc": 0.9387661599553331
+  }
+ },
+ "own_pinned": {
+  "probe_layer": {
+   "test_f1": 0.8416988416988417,
+   "test_precision": 0.923728813559322,
+   "test_recall": 0.7730496453900709,
+   "test_auroc": 0.9944686784719785
+  },
+  "probe_input": {
+   "test_f1": 0.027140291359010176,
+   "test_precision": 0.013963039014373716,
+   "test_recall": 0.48226950354609927,
+   "test_auroc": 0.9429366521558444
+  }
+ },
+ "enemy_pinned": {
+  "probe_layer": {
+   "test_f1": 0.8066666666666666,
+   "test_precision": 0.8461538461538461,
+   "test_recall": 0.7707006369426752,
+   "test_auroc": 0.9993687925535863
+  },
+  "probe_input": {
+   "test_f1": 0.0,
+   "test_precision": 0.0,
+   "test_recall": 0.0,
+   "test_auroc": 0.9366454600547299
+  }
+ },
+ "legal_from": {
+  "probe_layer": {
+   "test_f1": 0.9697096594081519,
+   "test_precision": 0.9573485840281127,
+   "test_recall": 0.9823941172311391,
+   "test_auroc": 0.9990964819974021
+  },
+  "probe_input": {
+   "test_f1": 0.8979112437305568,
+   "test_precision": 0.8147358718820209,
+   "test_recall": 1.0,
+   "test_auroc": 0.9886769523262868
+  }
+ },
+ "legal_to": {
+  "probe_layer": {
+   "test_f1": 0.9664266767715044,
+   "test_precision": 0.9644240077444337,
+   "test_recall": 0.9684376803669613,
+   "test_auroc": 0.9960576198413941
+  },
+  "probe_input": {
+   "test_f1": 0.6417300572916111,
+   "test_precision": 0.49455699532986913,
+   "test_recall": 0.913606124122847,
+   "test_auroc": 0.7541538537123401
+  }
+ },
+ "capture_target": {
+  "probe_layer": {
+   "test_f1": 0.9600141542816703,
+   "test_precision": 0.9522639522639522,
+   "test_recall": 0.967891544773457,
+   "test_auroc": 0.9996318356945362
+  },
+  "probe_input": {
+   "test_f1": 0.3630077787381158,
+   "test_precision": 0.23953461845557203,
+   "test_recall": 0.7491972886193364,
+   "test_auroc": 0.9510009890051759
+  }
+ },
+ "check_square": {
+  "probe_layer": {
+   "test_f1": 0.8361623616236162,
+   "test_precision": 0.8312545854732208,
+   "test_recall": 0.8411284335560505,
+   "test_auroc": 0.9953264136574941
+  },
+  "probe_input": {
+   "test_f1": 0.06414155377384573,
+   "test_precision": 0.036616161616161616,
+   "test_recall": 0.2583518930957684,
+   "test_auroc": 0.6869198532543254
+  }
+ },
+ "own_passed_pawn": {
+  "probe_layer": {
+   "test_f1": 0.8845577211394303,
+   "test_precision": 0.9161490683229814,
+   "test_recall": 0.855072463768116,
+   "test_auroc": 0.9998050057611935
+  },
+  "probe_input": {
+   "test_f1": 0.11562115621156212,
+   "test_precision": 0.06317204301075269,
+   "test_recall": 0.6811594202898551,
+   "test_auroc": 0.9716969725894462
+  }
+ },
+ "enemy_passed_pawn": {
+  "probe_layer": {
+   "test_f1": 0.9181692094313454,
+   "test_precision": 0.9706744868035191,
+   "test_recall": 0.8710526315789474,
+   "test_auroc": 0.9996380134083378
+  },
+  "probe_input": {
+   "test_f1": 0.11090766413811143,
+   "test_precision": 0.06157420853906477,
+   "test_recall": 0.5578947368421052,
+   "test_auroc": 0.968250723808056
+  }
+ },
+ "own_king_zone": {
+  "probe_layer": {
+   "test_f1": 0.9910077519379845,
+   "test_precision": 0.9910077519379845,
+   "test_recall": 0.9910077519379845,
+   "test_auroc": 0.9999475307768925
+  },
+  "probe_input": {
+   "test_f1": 0.39815720808871496,
+   "test_precision": 0.3287551336430351,
+   "test_recall": 0.5047028423772609,
+   "test_auroc": 0.7591999982040109
+  }
+ },
+ "enemy_king_zone": {
+  "probe_layer": {
+   "test_f1": 0.9940975458216837,
+   "test_precision": 0.9943034697048162,
+   "test_recall": 0.9938917072160679,
+   "test_auroc": 0.9999691426905218
+  },
+  "probe_input": {
+   "test_f1": 0.38959776400534696,
+   "test_precision": 0.32000266169816344,
+   "test_recall": 0.49787762708354905,
+   "test_auroc": 0.7540757150097797
+  }
+ },
+ "own_king_in_check": {
+  "probe_layer": {
+   "test_f1": 1.0,
+   "test_precision": 1.0,
+   "test_recall": 1.0,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 0.12727272727272726,
+   "test_precision": 0.08069164265129683,
+   "test_recall": 0.3010752688172043,
+   "test_auroc": 0.993495098466245
+  }
+ },
+ "own_can_castle_kingside": {
+  "probe_layer": {
+   "test_f1": 0.9575402635431918,
+   "test_precision": 0.9450867052023122,
+   "test_recall": 0.9703264094955489,
+   "test_auroc": 0.9966805381559509
+  },
+  "probe_input": {
+   "test_f1": 0.9491525423728814,
+   "test_precision": 0.9056603773584906,
+   "test_recall": 0.9970326409495549,
+   "test_auroc": 0.9990993312598391
+  }
+ },
+ "own_can_castle_queenside": {
+  "probe_layer": {
+   "test_f1": 0.9446064139941691,
+   "test_precision": 0.9152542372881356,
+   "test_recall": 0.9759036144578314,
+   "test_auroc": 0.9953452508664796
+  },
+  "probe_input": {
+   "test_f1": 0.9822485207100592,
+   "test_precision": 0.9651162790697675,
+   "test_recall": 1.0,
+   "test_auroc": 0.9997833800957253
+  }
+ },
+ "enemy_can_castle_kingside": {
+  "probe_layer": {
+   "test_f1": 0.9449838187702265,
+   "test_precision": 0.906832298136646,
+   "test_recall": 0.9864864864864865,
+   "test_auroc": 0.9965626964173476
+  },
+  "probe_input": {
+   "test_f1": 0.9801324503311258,
+   "test_precision": 0.961038961038961,
+   "test_recall": 1.0,
+   "test_auroc": 0.9997586872586872
+  }
+ },
+ "enemy_can_castle_queenside": {
+  "probe_layer": {
+   "test_f1": 0.9355932203389831,
+   "test_precision": 0.8903225806451613,
+   "test_recall": 0.9857142857142858,
+   "test_auroc": 0.9960860655737704
+  },
+  "probe_input": {
+   "test_f1": 0.958904109589041,
+   "test_precision": 0.9210526315789473,
+   "test_recall": 1.0,
+   "test_auroc": 0.9987792740046838
+  }
+ },
+ "is_check": {
+  "probe_layer": {
+   "test_f1": 0.8571428571428571,
+   "test_precision": 0.7692307692307693,
+   "test_recall": 0.967741935483871,
+   "test_auroc": 0.9968972342588135
+  },
+  "probe_input": {
+   "test_f1": 0.22508038585209003,
+   "test_precision": 0.16055045871559634,
+   "test_recall": 0.3763440860215054,
+   "test_auroc": 0.6562960925021589
+  }
+ },
+ "material_ahead": {
+  "probe_layer": {
+   "test_f1": 0.7936507936507936,
+   "test_precision": 0.7763975155279503,
+   "test_recall": 0.8116883116883117,
+   "test_auroc": 0.9739777310356805
+  },
+  "probe_input": {
+   "test_f1": 0.29902912621359223,
+   "test_precision": 0.21329639889196675,
+   "test_recall": 0.5,
+   "test_auroc": 0.6336957990004053
+  }
+ },
+ "material_behind": {
+  "probe_layer": {
+   "test_f1": 0.9194991055456172,
+   "test_precision": 0.8986013986013986,
+   "test_recall": 0.9413919413919414,
+   "test_auroc": 0.9908618955073722
+  },
+  "probe_input": {
+   "test_f1": 0.44506258692628653,
+   "test_precision": 0.35874439461883406,
+   "test_recall": 0.5860805860805861,
+   "test_auroc": 0.6968394278907727
+  }
+ },
+ "queens_on": {
+  "probe_layer": {
+   "test_f1": 0.9991289198606271,
+   "test_precision": 1.0,
+   "test_recall": 0.9982593559617058,
+   "test_auroc": 1.0
+  },
+  "probe_input": {
+   "test_f1": 0.9251950435979808,
+   "test_precision": 0.9786407766990292,
+   "test_recall": 0.8772845953002611,
+   "test_auroc": 0.9545572887609441
+  }
+ },
+ "endgame": {
+  "probe_layer": {
+   "test_f1": 0.8737201365187713,
+   "test_precision": 0.810126582278481,
+   "test_recall": 0.9481481481481482,
+   "test_auroc": 0.9902319902319903
+  },
+  "probe_input": {
+   "test_f1": 0.4491362763915547,
+   "test_precision": 0.30310880829015546,
+   "test_recall": 0.8666666666666667,
+   "test_auroc": 0.8984506851173518
+  }
+ }
+}

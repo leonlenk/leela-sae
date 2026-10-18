@@ -1,0 +1,121 @@
+{
+ "attacked_by_own": {
+  "probe_full_residual_f1": 0.9865145123271318,
+  "top1_features_f1": 0.6793659966153465,
+  "top3_features_f1": 0.6793659966153465,
+  "top10_features_f1": 0.7058036803058793,
+  "top30_features_f1": 0.8177086599360381
+ },
+ "attacked_by_enemy": {
+  "probe_full_residual_f1": 0.9886030478591941,
+  "top1_features_f1": 0.684598151586361,
+  "top3_features_f1": 0.6845451804752377,
+  "top10_features_f1": 0.6866020691179512,
+  "top30_features_f1": 0.7527002609917687
+ },
+ "own_hanging": {
+  "probe_full_residual_f1": 0.8888888888888888,
+  "top1_features_f1": 0.49936628643852976,
+  "top3_features_f1": 0.5195071868583162,
+  "top10_features_f1": 0.6477987421383647,
+  "top30_features_f1": 0.604602510460251
+ },
+ "enemy_hanging": {
+  "probe_full_residual_f1": 0.9195046439628483,
+  "top1_features_f1": 0.48382923673997413,
+  "top3_features_f1": 0.5637254901960784,
+  "top10_features_f1": 0.6842837273991655,
+  "top30_features_f1": 0.7378917378917379
+ },
+ "own_en_prise": {
+  "probe_full_residual_f1": 0.9046321525885559,
+  "top1_features_f1": 0.5492227979274611,
+  "top3_features_f1": 0.6197458455522972,
+  "top10_features_f1": 0.7220779220779221,
+  "top30_features_f1": 0.7220732797140303
+ },
+ "enemy_en_prise": {
+  "probe_full_residual_f1": 0.9155672823218998,
+  "top1_features_f1": 0.4579780755176614,
+  "top3_features_f1": 0.6188118811881188,
+  "top10_features_f1": 0.6970091027308193,
+  "top30_features_f1": 0.7142857142857143
+ },
+ "own_pinned": {
+  "probe_full_residual_f1": 0.6923076923076923,
+  "top1_features_f1": 0.27722772277227725,
+  "top3_features_f1": 0.3905325443786982,
+  "top10_features_f1": 0.3543307086614173,
+  "top30_features_f1": 0.4575645756457565
+ },
+ "enemy_pinned": {
+  "probe_full_residual_f1": 0.7887323943661971,
+  "top1_features_f1": 0.4875,
+  "top3_features_f1": 0.5296167247386759,
+  "top10_features_f1": 0.6214689265536724,
+  "top30_features_f1": 0.5895316804407713
+ },
+ "legal_from": {
+  "probe_full_residual_f1": 0.9586586726157278,
+  "top1_features_f1": 0.5349645733397879,
+  "top3_features_f1": 0.5514658401136511,
+  "top10_features_f1": 0.7091119168094346,
+  "top30_features_f1": 0.9027086603653852
+ },
+ "legal_to": {
+  "probe_full_residual_f1": 0.9579278290037755,
+  "top1_features_f1": 0.5106927605705909,
+  "top3_features_f1": 0.5106835234212656,
+  "top10_features_f1": 0.6766836405364699,
+  "top30_features_f1": 0.7915640793054296
+ },
+ "capture_target": {
+  "probe_full_residual_f1": 0.9397169316791892,
+  "top1_features_f1": 0.40019071837253656,
+  "top3_features_f1": 0.4715417867435158,
+  "top10_features_f1": 0.6200317965023847,
+  "top30_features_f1": 0.7904316172646906
+ },
+ "check_square": {
+  "probe_full_residual_f1": 0.8056437389770723,
+  "top1_features_f1": 0.29071803852889666,
+  "top3_features_f1": 0.42289719626168226,
+  "top10_features_f1": 0.5078988941548184,
+  "top30_features_f1": 0.5720048406615571
+ },
+ "own_passed_pawn": {
+  "probe_full_residual_f1": 0.7427745664739884,
+  "top1_features_f1": 0.4357976653696498,
+  "top3_features_f1": 0.49612403100775193,
+  "top10_features_f1": 0.5398373983739837,
+  "top30_features_f1": 0.5860058309037901
+ },
+ "enemy_passed_pawn": {
+  "probe_full_residual_f1": 0.738255033557047,
+  "top1_features_f1": 0.45194805194805193,
+  "top3_features_f1": 0.4613368283093054,
+  "top10_features_f1": 0.5725490196078431,
+  "top30_features_f1": 0.589242053789731
+ },
+ "own_king_zone": {
+  "probe_full_residual_f1": 0.9890950436715076,
+  "top1_features_f1": 0.40888959190129703,
+  "top3_features_f1": 0.6084164046296916,
+  "top10_features_f1": 0.7339693273759208,
+  "top30_features_f1": 0.8349723069967221
+ },
+ "enemy_king_zone": {
+  "probe_full_residual_f1": 0.9854592496765847,
+  "top1_features_f1": 0.28848446316458715,
+  "top3_features_f1": 0.34880919284589007,
+  "top10_features_f1": 0.5236768802228412,
+  "top30_features_f1": 0.811453694831182
+ },
+ "own_king_in_check": {
+  "probe_full_residual_f1": 0.9946524064171123,
+  "top1_features_f1": 0.956989247311828,
+  "top3_features_f1": 0.9497206703910615,
+  "top10_features_f1": 0.8913043478260869,
+  "top30_features_f1": 0.9945945945945946
+ }
+}

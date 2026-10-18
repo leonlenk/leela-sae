@@ -1,0 +1,37 @@
+{
+  "puzzles": 1000,
+  "puzzle_top1_accuracy": 0.938,
+  "mate_in_one_puzzles": 134,
+  "mate_in_one_found": 1.0,
+  "accuracy_by_rating": {
+    "(0, 1000]": {
+      "acc": 0.9906976744186047,
+      "n": 215
+    },
+    "(1000, 1500]": {
+      "acc": 0.9911504424778761,
+      "n": 339
+    },
+    "(1500, 2000]": {
+      "acc": 0.9033613445378151,
+      "n": 238
+    },
+    "(2000, 2500]": {
+      "acc": 0.8588957055214724,
+      "n": 163
+    },
+    "(2500, 4000]": {
+      "acc": 0.7555555555555555,
+      "n": 45
+    }
+  },
+  "special_positions": {
+    "ruy_lopez_castles": true,
+    "white_promotes": true,
+    "black_promotes": true,
+    "mate_in_one_qb7": true
+  },
+  "history_zero_kl_median": 2.705463409423828,
+  "history_zero_top1_changed": 0.9399999976158142,
+  "history_randomize_kl_median": 2.360722303390503
+}
