@@ -34,6 +34,9 @@ def main():
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--lr", type=float, default=None, help="default: Gao et al. scaling rule")
     ap.add_argument("--real-history", action="store_true", help="val acts with real game history (pair with a _realhist cache)")
+    ap.add_argument("--random-weights", type=int, default=None, metavar="SEED",
+                    help="val acts from the randomized net (pair with a _randnet cache)")
+    ap.add_argument("--random-init", default="permute", choices=["permute", "fresh"])
     args = ap.parse_args()
 
     acts_path = Path(args.acts or f"outputs/acts/L{args.layer}_train.npy")
@@ -44,6 +47,8 @@ def main():
     print(f"training rows: {acts.shape[0]:,} from {grouped.shape[0]:,} boards ({acts_path})")
 
     model = hook.load_model()
+    if args.random_weights is not None:
+        hook.randomize_weights(model, seed=args.random_weights, mode=args.random_init)
     module = hook.list_residual_modules(model)[args.layer]
     val = lichess.load_corpus(CORPUS, split="val", limit=args.val_boards)
     if args.real_history:
@@ -68,7 +73,8 @@ def main():
     out = Path("outputs/sae", f"{name}.pt")
     out.parent.mkdir(parents=True, exist_ok=True)
     meta = {"layer": args.layer, "module": module, "acts": str(acts_path), "train_boards": int(grouped.shape[0]),
-            "real_history": args.real_history,
+            "real_history": args.real_history, "random_weights": args.random_weights,
+            "random_init": args.random_init if args.random_weights is not None else None,
             "train_config": {**train.DEFAULTS, **config}, "minutes": minutes,
             "final": history[-1], "val_fvu": train.fvu(sae, val_acts)}
     sae.save(out, meta=meta, history=history)

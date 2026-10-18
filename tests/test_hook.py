@@ -6,6 +6,7 @@ unless LEELA_SAE_CHECKPOINT is set (see conftest.py).
 """
 
 import chess
+import pytest
 import torch
 from lczerolens import LczeroBoard
 
@@ -184,3 +185,23 @@ def test_promotion_slots_match_lc0_including_knight_underpromotion():
     assert hook.policy_index(b, chess.Move.from_uci("a7a8n")) == plain
     slots = {p: hook.policy_index(b, chess.Move.from_uci("a7a8" + p)) for p in "qrbn"}
     assert len(set(slots.values())) == 4                 # four promotions, four distinct slots
+
+
+def test_randomize_weights_modes():
+    class Tiny(torch.nn.Module):
+        def __init__(self):
+            super().__init__()
+            self.ln = torch.nn.LayerNorm(64)
+            self.register_buffer("w", torch.arange(64 * 64, dtype=torch.float32).reshape(64, 64))
+            self.register_buffer("b", torch.ones(64))
+            self.register_buffer("scale", torch.tensor([0.427]))           # small constant: untouched
+
+    m = hook.randomize_weights(Tiny(), seed=0, mode="permute")
+    assert torch.equal(m.w.flatten().sort().values, torch.arange(64 * 64, dtype=torch.float32))   # same values...
+    assert not torch.equal(m.w, torch.arange(64 * 64, dtype=torch.float32).reshape(64, 64))      # ...shuffled
+    assert float(m.scale) == pytest.approx(0.427)
+
+    f = hook.randomize_weights(Tiny(), seed=0, mode="fresh")
+    assert torch.equal(f.ln.weight, torch.ones(64)) and torch.equal(f.ln.bias, torch.zeros(64))   # LN = identity
+    assert torch.equal(f.b, torch.zeros(64)) and abs(float(f.w.std()) - 0.02) < 0.002          # small Gaussian
+    assert float(f.scale) == pytest.approx(0.427)

@@ -219,3 +219,34 @@ def output_depends_on_history(model: LczeroModel, fen: str, seed: int = 0) -> di
         "zero_top1_changed": float(top[1] != top[0]),
         "randomize_top1_changed": float(top[2] != top[0]),
     }
+
+
+@torch.no_grad()
+def randomize_weights(model, seed: int = 0, mode: str = "permute", min_numel: int = 64, std: float = 0.02):
+    """Untrained-net controls (cf. Karvonen et al. 2024's "SAE on a random-weights model"), IN PLACE.
+
+    mode="permute": randomly permute the entries of every floating-point weight tensor with
+        >= min_numel entries. Keeps each tensor's value distribution (trained-scale weights) but
+        destroys everything learned. In this post-LN net that drives strong token mixing: by layer 7
+        all 64 tokens collapse to one vector, so per-square information is lost.
+    mode="fresh": a conventional fresh init — weight matrices ~ N(0, std), vectors (biases) 0,
+        LayerNorm gains 1. Small weights make each block close to the identity, so the input board
+        passes through nearly untouched (a linear probe still reads every square at layer 7).
+    The ONNX conversion stores most weights as buffers and LayerNorm affine params as parameters;
+    tensors with < min_numel entries (scalars, scale constants) are left alone in both modes.
+    """
+    gen = torch.Generator().manual_seed(seed)
+    for name, t in list(model.named_parameters()) + list(model.named_buffers()):
+        if not t.is_floating_point() or t.numel() < min_numel:
+            continue
+        if mode == "permute":
+            flat = t.reshape(-1)
+            t.copy_(flat[torch.randperm(flat.numel(), generator=gen).to(flat.device)].reshape(t.shape))
+        elif mode == "fresh":
+            if t.ndim == 1:
+                t.fill_(1.0 if (name.endswith(".weight") and "ln" in name) else 0.0)
+            else:
+                t.copy_(torch.randn(t.shape, generator=gen).to(t.device) * std)
+        else:
+            raise ValueError(f"unknown mode {mode!r}")
+    return model

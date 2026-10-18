@@ -29,9 +29,14 @@ def main():
     ap.add_argument("--batch-size", type=int, default=256)
     ap.add_argument("--out-dir", default="outputs/acts")
     ap.add_argument("--real-history", action="store_true")
+    ap.add_argument("--random-weights", type=int, default=None, metavar="SEED",
+                    help="untrained-net control (hook.randomize_weights)")
+    ap.add_argument("--random-init", default="permute", choices=["permute", "fresh"])
     args = ap.parse_args()
 
     model = hook.load_model()
+    if args.random_weights is not None:
+        hook.randomize_weights(model, seed=args.random_weights, mode=args.random_init)
     modules = hook.list_residual_modules(model)
     names = {L: modules[L] for L in args.layers}
     corpus = lichess.load_corpus(CORPUS, split="train", limit=args.n_boards)
@@ -48,6 +53,10 @@ def main():
 
     mode = "realhist" if args.real_history else "fen"
     suffix = "_realhist" if args.real_history else ""
+    if args.random_weights is not None:
+        tag = "randnet" if args.random_init == "permute" else "freshnet"
+        mode += f"|{tag}{args.random_weights}"
+        suffix += f"_{tag}{args.random_weights}"
     sig = lambda L: f"{hook.DEFAULT_CHECKPOINT}|{names[L]}|{hook.ENCODING.name}|{mode}|lczerolens=={lczerolens.__version__}"
     paths = cache.cache_activations_multi(
         fens, capture, {L: Path(args.out_dir, f"L{L}_train{suffix}.npy") for L in args.layers},
