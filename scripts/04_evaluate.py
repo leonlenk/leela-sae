@@ -5,7 +5,8 @@
 Splits (all from held-out GAMES, never seen in SAE training):
   S = first --n-select boards of the Lichess VAL split   -> feature SELECTION, probe fitting
   T = first --n-test boards of the Lichess TEST split    -> every reported number
-Writes outputs/results/<sae name>/results.json and summary.md.
+Writes outputs/results/<sae name>/results.json and summary.md. Linear-probe baselines (which
+depend only on the layer) come from scripts/04b_probes.py.
 
 DESIGN.md §4: a feature is only "real" if it (1) matches a board property on held-out data, (2) has
 a causal effect on the heads beyond an activation-matched control, and (3) survives the history
@@ -21,7 +22,7 @@ import torch
 
 from src import hook
 from src.data import cache, lichess
-from src.eval import board_props, causal, correlational, history_filter, probes
+from src.eval import board_props, causal, correlational, history_filter
 from src.eval.codes import encode_corpus
 from src.eval.feature_mining import density_from_codes
 from src.eval.fidelity import fidelity, mean_activation
@@ -32,28 +33,16 @@ MIN_POS_SQUARE = 100     # minimum positives in S to score a per-square property
 MIN_POS_BOARD = 50
 
 
-def acts_and_inputs(model, module, fens, batch=250):
-    """(N*64, D) residual acts and (N*64, 112) raw input planes per token, in token order."""
-    acts, planes = [], []
-    for s in range(0, len(fens), batch):
-        x = hook.encode_fens(fens[s:s + batch])                              # (b, 112, 8, 8)
-        a, _ = hook.run_with_cache(model, x, [module])
-        acts.append(a[module].reshape(-1, a[module].shape[-1]).cpu())
-        planes.append(x.permute(0, 2, 3, 1).reshape(-1, 112))                # token = row*8 + col
-    return torch.cat(acts), torch.cat(planes)
-
-
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--sae", required=True)
     ap.add_argument("--n-select", type=int, default=4000)
     ap.add_argument("--n-test", type=int, default=4000)
     ap.add_argument("--n-fidelity", type=int, default=1000)
-    ap.add_argument("--n-probe", type=int, default=1500)
     ap.add_argument("--n-causal", type=int, default=64)
     ap.add_argument("--n-random-features", type=int, default=30)
     ap.add_argument("--n-history", type=int, default=1500)
-    ap.add_argument("--skip-probes", action="store_true")
+    ap.add_argument("--skip-probes", action="store_true", help=argparse.SUPPRESS)   # no-op; probes moved to 04b
     args = ap.parse_args()
 
     ckpt = torch.load(args.sae, map_location="cpu", weights_only=True)
@@ -105,23 +94,7 @@ def main():
         r = correlational.evaluate_property(codes_S, torch.from_numpy(bd_S[fam]), codes_T, torch.from_numpy(bd_T[fam]), level="board")
         rows.append({"property": fam, "level": "board", "origin": origin, **r})
 
-    if not args.skip_probes:
-        n = args.n_probe
-        aS, pS = acts_and_inputs(model, module, fens_S[:n])
-        aT, pT = acts_and_inputs(model, module, fens_T[:n])
-        for row in rows:
-            fam = row["property"]
-            if row["level"] == "square":
-                yS, yT = torch.from_numpy(sq_S[fam][:n]).reshape(-1), torch.from_numpy(sq_T[fam][:n]).reshape(-1)
-                row["probe_layer"] = probes.fit_probe(aS, yS, aT, yT)
-                row["probe_input"] = probes.fit_probe(pS, yS, pT, yT)
-            else:
-                yS, yT = torch.from_numpy(bd_S[fam][:n]), torch.from_numpy(bd_T[fam][:n])
-                row["probe_layer"] = probes.fit_probe(aS.reshape(n, 64, -1).mean(1), yS, aT.reshape(n, 64, -1).mean(1), yT)
-                row["probe_input"] = probes.fit_probe(pS.reshape(n, -1), yS, pT.reshape(n, -1), yT)
-            print(f"{fam:28s} sae F1 {row['test_f1']:.3f}  probe(layer) {row['probe_layer']['test_f1']:.3f}  "
-                  f"probe(input) {row['probe_input']['test_f1']:.3f}")
-        del aS, aT, pS, pT
+    # Linear-probe baselines are per layer, not per SAE: scripts/04b_probes.py.
 
     # ---------------------------------------------------------------- 4. causal
     for row in rows:
@@ -213,13 +186,13 @@ def main():
     res["properties"] = rows
     (out_dir / "results.json").write_text(json.dumps(res, indent=1))
 
-    lines = ["| property | origin | feat | test F1 (P/R) | AUROC | null p95 | probe layer | probe input | "
-             "KL win | target win | hist corr | passes |", "|" + "---|" * 12]
+    lines = ["| property | origin | feat | test F1 (P/R) | AUROC | null p95 | "
+             "KL win | target win | hist corr | passes |", "|" + "---|" * 10]
     for r in sorted(rows, key=lambda r: -r["test_f1"]):
-        pl, pi, c = r.get("probe_layer", {}), r.get("probe_input", {}), r["causal"]
+        c = r["causal"]
         lines.append(
             f"| {r['property']} | {r['origin']} | {r['feature']} | {r['test_f1']:.2f} ({r['test_precision']:.2f}/{r['test_recall']:.2f}) "
-            f"| {r['test_auroc']:.2f} | {r['null_f1_p95']:.2f} | {pl.get('test_f1', float('nan')):.2f} | {pi.get('test_f1', float('nan')):.2f} "
+            f"| {r['test_auroc']:.2f} | {r['null_f1_p95']:.2f} "
             f"| {c.get('kl_win_rate', float('nan')):.2f} | {c.get('target_win_rate', float('nan')):.2f} | {r['history']['corr']:.2f} "
             f"| {'ALL' if r['passes']['all'] else ','.join(k[:4] for k, v in r['passes'].items() if v and k != 'all') or '-'} |")
     (out_dir / "summary.md").write_text("\n".join(lines) + "\n")

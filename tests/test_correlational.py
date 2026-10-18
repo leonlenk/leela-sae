@@ -84,3 +84,14 @@ def test_board_level_property():
     codes = codes_from_dense(d, 1)
     out = corr.evaluate_property(codes, y, codes, y, level="board", n_perm=3)
     assert out["feature"] == 2 and out["test_f1"] == 1.0 and out["test_auroc"] == 1.0
+
+
+def test_probe_threshold_is_exact_even_for_rare_positives():
+    # 3 positives in 10,000 with perfectly separating scores: the best-F1 cut must isolate exactly
+    # those 3 (F1 = 1). A percentile grid would land below them and pull in dozens of negatives.
+    from src.eval.probes import best_f1_threshold
+    scores = torch.linspace(0, 1, 10_000)
+    labels = torch.zeros(10_000, dtype=torch.bool)
+    labels[-3:] = True
+    t = best_f1_threshold(scores, labels)
+    assert ((scores > t) == labels).all()

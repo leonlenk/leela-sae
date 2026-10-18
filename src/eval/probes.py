@@ -16,6 +16,26 @@ import torch
 from src.eval.correlational import auroc, f1_from_counts
 
 
+def best_f1_threshold(scores: torch.Tensor, labels: torch.Tensor) -> float:
+    """Threshold t maximising F1 of (scores > t), searched EXACTLY over every cut point.
+
+    (A coarse quantile grid fails for rare properties: at 0.1% prevalence the optimal cut sits above
+    the 99.9th percentile, between grid points, and the probe looks far worse than it is.)
+    """
+    order = torch.argsort(scores, descending=True)
+    s, y = scores[order], labels[order].double()
+    tp = torch.cumsum(y, 0)                                     # predicting the top i+1 as positive
+    fired = torch.arange(1, len(s) + 1, device=s.device, dtype=torch.float64)
+    f1 = 2 * tp / (fired + y.sum())
+    # Only cut between distinct scores (ties must fall on the same side).
+    distinct = torch.ones_like(s, dtype=torch.bool)
+    distinct[:-1] = s[:-1] != s[1:]
+    f1 = torch.where(distinct, f1, torch.zeros_like(f1))
+    i = int(torch.argmax(f1))
+    nxt = s[i + 1] if i + 1 < len(s) else s[i] - 1
+    return float((s[i] + nxt) / 2)                              # midway to the next lower score
+
+
 def fit_probe(X_S: torch.Tensor, y_S: torch.Tensor, X_T: torch.Tensor, y_T: torch.Tensor,
               steps: int = 300, lr: float = 0.05, weight_decay: float = 1e-4, device: str | None = None) -> dict:
     """Logistic-regression probe. X: (M, d) features, y: (M,) bool. Returns test F1 / AUROC."""
@@ -38,16 +58,7 @@ def fit_probe(X_S: torch.Tensor, y_S: torch.Tensor, X_T: torch.Tensor, y_T: torc
 
     with torch.no_grad():
         s_S, s_T = X_S @ w + b, X_T @ w + b
-        # Threshold that maximises F1 on S (searched over S-score quantiles), applied unchanged to T.
-        qs = torch.quantile(s_S[torch.randperm(len(s_S), device=device)[:200_000]],
-                            torch.linspace(0.0, 1.0, 201, device=device))
-        best_t, best_f1 = 0.0, -1.0
-        yS = y_S.bool()
-        for t in qs:
-            on = s_S > t
-            f1 = float(f1_from_counts((on & yS).sum().cpu()[None], on.sum().cpu()[None], yS.sum().cpu())[2])
-            if f1 > best_f1:
-                best_t, best_f1 = float(t), f1
+        best_t = best_f1_threshold(s_S, y_S.bool())
         on_T = s_T > best_t
         p, r, f1 = (float(x) for x in f1_from_counts((on_T & y_T).sum().cpu()[None], on_T.sum().cpu()[None], y_T.sum().cpu()))
     return {"test_f1": f1, "test_precision": p, "test_recall": r, "test_auroc": auroc(s_T.cpu(), y_T.cpu())}
